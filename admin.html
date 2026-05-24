@@ -1,0 +1,2093 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>SnipeIT Admin Tools</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1117;--surface:#181c27;--surface2:#1e2535;
+  --border:#2a2f3e;--accent:#4f8ef7;--accent2:#27c98f;
+  --warn:#f7a84f;--danger:#e05555;--purple:#7c5cbf;
+  --text:#d8dce8;--muted:#606578;--muted2:#3a4156;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  --sidebar-w:260px;--sidebar-col:52px;--hdr:52px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.5;height:100vh;overflow:hidden}
+
+/* Layout */
+.app{display:grid;grid-template-rows:var(--hdr) 1fr;height:100vh}
+.body{display:grid;grid-template-columns:var(--sidebar-w) 1fr;overflow:hidden;transition:grid-template-columns .25s}
+.body.col{grid-template-columns:var(--sidebar-col) 1fr}
+
+/* Header */
+header{background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:10px;z-index:20}
+.hdr-logo{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;color:white;flex-shrink:0}
+header h1{font-size:14px;font-weight:600;flex:1}
+.hdr-badge{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:20px}
+.btn-icon{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px;border-radius:4px;font-size:15px;transition:color .15s}
+.btn-icon:hover{color:var(--text)}
+.save-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);opacity:0;transition:opacity .3s;flex-shrink:0}
+.save-dot.show{opacity:1}
+.status-pill{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid;display:flex;align-items:center;gap:5px;font-family:var(--mono)}
+.status-pill.ok{background:#0d2b1e;color:var(--accent2);border-color:#1a4a32}
+.status-pill.err{background:#2b0d0d;color:var(--danger);border-color:#4a1a1a}
+.status-pill.saving{background:var(--surface2);color:var(--warn);border-color:#3a2a10}
+
+/* Sidebar */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column}
+.sidebar-nav{flex:1;overflow-y:auto;padding:8px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;color:var(--muted);font-size:13px;transition:all .15s;border-left:2px solid transparent;white-space:nowrap}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--surface2);color:var(--accent);border-left-color:var(--accent)}
+.nav-item i{width:18px;text-align:center;flex-shrink:0;font-size:14px}
+.nav-label{flex:1;overflow:hidden;text-overflow:ellipsis}
+.nav-div{height:1px;background:var(--border);margin:6px 10px}
+.nav-grp-hdr{display:flex;align-items:center;gap:10px;padding:6px 14px;cursor:pointer;color:var(--muted2);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;transition:color .15s;user-select:none;white-space:nowrap}
+.nav-grp-hdr:hover{color:var(--muted)}
+.nav-grp-hdr i.gi{width:18px;text-align:center;font-size:12px;flex-shrink:0}
+.nav-grp-hdr .chv{margin-left:auto;font-size:10px;transition:transform .2s;flex-shrink:0}
+.nav-grp-hdr.closed .chv{transform:rotate(-90deg)}
+.nav-grp-body{overflow:hidden;max-height:600px;transition:max-height .25s ease}
+.nav-grp-body.closed{max-height:0}
+.col .nav-label,.col .nav-grp-hdr span,.col .nav-grp-hdr .chv{display:none}
+
+/* Main */
+.main{overflow:hidden;display:grid;grid-template-rows:1fr}
+.view{display:none;height:100%;overflow:hidden}
+.view.active{display:grid}
+
+/* Tool views */
+.tool-view{grid-template-columns:300px 1fr;grid-template-rows:1fr auto;overflow:hidden}
+.cfg-panel{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto}
+.prev-panel{overflow-y:auto;padding:20px;background:#111318}
+.tool-footer{grid-column:1/-1;background:var(--surface);border-top:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px}
+
+/* Config sections */
+.sec{border-bottom:1px solid var(--border)}
+.sec-hdr{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;user-select:none;transition:background .15s}
+.sec-hdr:hover{background:var(--surface2)}
+.sec-hdr i.si{color:var(--accent);font-size:12px;width:16px;text-align:center}
+.sec-hdr .st{flex:1;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.sec-hdr .sc{font-size:10px;color:var(--muted);transition:transform .2s}
+.sec-hdr.closed .sc{transform:rotate(-90deg)}
+.sec-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;overflow:hidden;max-height:1200px;transition:max-height .25s,padding .25s}
+.sec-body.closed{max-height:0;padding-top:0;padding-bottom:0}
+
+/* Form */
+.fr{display:flex;flex-direction:column;gap:3px}
+.fr label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.fr input,.fr select,.fr textarea{background:#1a1f2e;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 9px;outline:none;transition:border-color .15s;width:100%}
+.fr input:focus,.fr select:focus,.fr textarea:focus{border-color:var(--accent)}
+.fr textarea{resize:vertical;min-height:54px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tkn-wrap{display:flex;gap:6px}.tkn-wrap input{flex:1}
+.ic-btn{background:#1a1f2e;border:1px solid var(--border);border-radius:4px;color:var(--muted);padding:0 9px;cursor:pointer;font-size:12px;transition:color .15s}
+.ic-btn:hover{color:var(--text)}
+
+/* Checkboxes */
+.cb-row{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:4px;cursor:pointer;transition:background .1s}
+.cb-row:hover{background:var(--surface2)}
+.cb-row input[type=checkbox]{display:none}
+.cb-box{width:15px;height:15px;border:1px solid var(--border);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:transparent;transition:all .15s}
+.cb-row input:checked~.cb-box{background:var(--accent);border-color:var(--accent);color:white}
+.cb-row input:checked~.cb-box.g{background:var(--accent2);border-color:var(--accent2);color:#0a1a12}
+.cb-label{font-size:12px;flex:1}
+.cb-key{font-family:var(--mono);font-size:10px;color:var(--muted);background:#1a1f2e;padding:1px 5px;border-radius:3px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:5px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s;text-decoration:none}
+.btn-blue{background:var(--accent);color:white}.btn-blue:hover{background:#3a7ae8}
+.btn-green{background:var(--accent2);color:#0a1a12}.btn-green:hover{background:#20b07d}
+.btn-purple{background:var(--purple);color:white}.btn-purple:hover{background:#6b4dab}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}.btn-ghost:hover{color:var(--text);border-color:var(--muted)}
+.btn-red{background:var(--danger);color:white}.btn-red:hover{background:#c94444}
+.bm-drag{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:6px;font-weight:600;font-size:12px;color:white;text-decoration:none;cursor:grab;user-select:none;border:none}
+
+/* Preview */
+.prev-lbl{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.prev-lbl i{color:var(--accent2)}
+.mail-prev{background:var(--surface);border:1px solid var(--border);border-radius:7px;overflow:hidden;font-family:var(--mono);font-size:12px}
+.mail-hdr{background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;flex-direction:column;gap:3px}
+.mhr{display:flex;gap:7px;font-size:11px}
+.mhr .mk{color:var(--muted);min-width:55px}
+.mhr .ms{color:var(--accent);font-weight:600}
+.mail-body{padding:14px;white-space:pre-wrap;line-height:1.7;font-size:11px;min-height:140px}
+.a4{background:white;width:100%;max-width:700px;padding:30px 38px;margin:0 auto;font-family:Arial,sans-serif;font-size:11px;color:#1a1a1a;box-shadow:0 4px 24px rgba(0,0,0,.4);border-radius:2px}
+
+/* Custom fields table */
+.cf-table{width:100%;border-collapse:collapse;font-size:12px}
+.cf-table th{padding:7px 10px;text-align:left;background:var(--surface2);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cf-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+.cf-table tr:hover td{background:var(--surface2)}
+.cf-table code{font-family:var(--mono);font-size:10px;background:#1a1f2e;padding:1px 5px;border-radius:3px;color:var(--accent2)}
+.cf-add-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:6px;padding:10px 14px;background:var(--surface2);border-top:1px solid var(--border)}
+.cf-add-row input,.cf-add-row select{background:#1a1f2e;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;padding:6px 8px;outline:none}
+.cf-add-row input:focus,.cf-add-row select:focus{border-color:var(--accent)}
+
+/* Home */
+.tool-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.tc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;cursor:pointer;transition:all .2s}
+.tc:hover{transform:translateY(-1px)}
+.tc.mail:hover{border-color:var(--accent)}.tc.pdf:hover{border-color:var(--purple)}.tc.dist:hover{border-color:var(--accent2)}
+.tc-icon{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;color:white;margin-bottom:10px}
+.tc.mail .tc-icon{background:var(--accent)}.tc.pdf .tc-icon{background:var(--purple)}.tc.dist .tc-icon{background:var(--accent2)}
+.tc h3{font-size:14px;font-weight:600;margin-bottom:3px}
+.tc p{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:12px}
+.tc-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:4px;font-size:11px;font-weight:600;border:none;cursor:pointer;color:white}
+.tc.mail .tc-btn{background:var(--accent)}.tc.pdf .tc-btn{background:var(--purple)}.tc.dist .tc-btn{background:var(--accent2);color:#0a1a12}
+.bm-sect{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px}
+.bm-sect h3{font-size:12px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.bm-sect h3 i{color:var(--accent2)}
+.bm-sect p{font-size:11px;color:var(--muted);margin-bottom:12px}
+.bm-row{display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--border)}
+.bm-row:last-child{border-bottom:none;padding-bottom:0}
+.bm-row-lbl{font-size:11px;color:var(--muted);flex:1}
+
+/* File status bar */
+.file-status{display:flex;gap:10px;padding:8px 16px;background:var(--surface2);border-top:1px solid var(--border);flex-wrap:wrap}
+.fs-item{display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--mono);color:var(--muted)}
+.fs-item.ok i{color:var(--accent2)}
+.fs-item.miss i{color:var(--danger)}
+.fs-item.ok .fs-time{color:var(--muted);font-size:10px;margin-left:2px}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--surface2);border:1px solid var(--border);padding:9px 16px;border-radius:6px;font-size:12px;display:flex;align-items:center;gap:7px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;max-width:380px}
+#toast.show{opacity:1}
+#toast.ok{background:#0d2b1e;color:var(--accent2);border-color:#1a4a32}
+#toast.err{background:#2b0d0d;color:var(--danger);border-color:#4a1a1a}
+#toast.warn{background:#1f1800;color:var(--warn);border-color:#3a2a00}
+
+/* Distribute preview */
+.dist-wrap{background:#e8eaf0;border:1px solid var(--border);border-radius:8px;padding:16px;max-height:400px;overflow:auto;margin-bottom:14px}
+.dist-card{background:white;border-radius:10px;padding:22px 24px;max-width:500px;margin:0 auto;font-family:-apple-system,sans-serif;font-size:13px;color:#1a1a1a;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+.dist-bm-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:6px;font-weight:600;font-size:13px;color:white;text-decoration:none;cursor:grab;user-select:none;margin:4px 4px 0 0;border:none}
+.dist-steps{list-style:none;counter-reset:s;margin-top:12px}
+.dist-steps li{counter-increment:s;display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:12px;color:#444;line-height:1.5}
+.dist-steps li:last-child{border-bottom:none}
+.dist-steps li::before{content:counter(s);min-width:21px;height:21px;background:#e8f0fe;color:#0078d4;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0;margin-top:1px}
+
+/* Note box */
+.note-box{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 13px;font-size:11px;color:var(--muted);margin-bottom:12px}
+.note-box b{color:var(--text)}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<header>
+  <button class="btn-icon" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+  <div class="hdr-logo"><i class="fa-solid fa-bookmark"></i></div>
+  <h1>SnipeIT Admin Tools</h1>
+  <span class="save-dot" id="saveDot"></span>
+  <span class="status-pill saving" id="statusPill" style="display:none">
+    <i class="fa-solid fa-circle-notch fa-spin"></i><span id="pillText">Verbinde...</span>
+  </span>
+  <span class="hdr-badge">nur für IT</span>
+</header>
+
+<div class="body" id="body">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-nav">
+    <div class="nav-item active" onclick="nav('home')" id="nav-home"><i class="fa-solid fa-house"></i><span class="nav-label">Startseite</span></div>
+    <div class="nav-div"></div>
+
+    <div class="nav-grp">
+      <div class="nav-grp-hdr" onclick="toggleGrp(this)"><i class="fa-solid fa-envelope gi"></i><span>Outlook Mail</span><i class="fa-solid fa-chevron-down chv"></i></div>
+      <div class="nav-grp-body">
+        <div class="nav-item" onclick="nav('mail')" id="nav-mail"><i class="fa-solid fa-sliders"></i><span class="nav-label">Konfiguration</span></div>
+      </div>
+    </div>
+
+    <div class="nav-grp">
+      <div class="nav-grp-hdr" onclick="toggleGrp(this)"><i class="fa-solid fa-file-pdf gi"></i><span>Geräte-Ausgabe PDF</span><i class="fa-solid fa-chevron-down chv"></i></div>
+      <div class="nav-grp-body">
+        <div class="nav-item" onclick="nav('pdf')" id="nav-pdf"><i class="fa-solid fa-file-lines"></i><span class="nav-label">Konfiguration</span></div>
+        <div class="nav-item" onclick="nav('pdf-cats')" id="nav-pdf-cats"><i class="fa-solid fa-layer-group"></i><span class="nav-label">Kategorien &amp; Felder</span></div>
+      </div>
+    </div>
+
+    <div class="nav-grp">
+      <div class="nav-grp-hdr" onclick="toggleGrp(this)"><i class="fa-solid fa-pen-nib gi"></i><span>Elektronische Signatur</span><i class="fa-solid fa-chevron-down chv"></i></div>
+      <div class="nav-grp-body">
+        <div class="nav-item" onclick="nav('sign')" id="nav-sign"><i class="fa-solid fa-sliders"></i><span class="nav-label">Konfiguration</span></div>
+        <div class="nav-item" onclick="nav('sign-log')" id="nav-sign-log"><i class="fa-solid fa-list-check"></i><span class="nav-label">Audit-Trail</span></div>
+      </div>
+    </div>
+
+    <div class="nav-div"></div>
+    <div class="nav-item" onclick="nav('distribute')" id="nav-distribute"><i class="fa-solid fa-share-nodes"></i><span class="nav-label">Lesezeichen verteilen</span></div>
+    <div class="nav-item" onclick="nav('fields')" id="nav-fields"><i class="fa-solid fa-database"></i><span class="nav-label">Custom Fields</span></div>
+    <div class="nav-div"></div>
+    <div class="nav-grp-hdr" onclick="toggleGrp(this)"><i class="gi fa-solid fa-tag"></i><span>Label Druck</span><i class="chv fa-solid fa-chevron-down"></i></div>
+    <div class="nav-grp-body">
+      <div class="nav-item" onclick="nav('label')" id="nav-label"><i class="fa-solid fa-sliders"></i><span class="nav-label">Konfiguration</span></div>
+    </div>
+    <div class="nav-div"></div>
+    <div class="nav-grp-hdr" onclick="toggleGrp(this)"><i class="gi fa-solid fa-mobile-screen-button"></i><span>AirWatch MDM</span><i class="chv fa-solid fa-chevron-down"></i></div>
+    <div class="nav-grp-body">
+      <div class="nav-item" onclick="nav('airwatch-cfg')" id="nav-airwatch-cfg"><i class="fa-solid fa-sliders"></i><span class="nav-label">Konfiguration</span></div>
+      <div class="nav-item" onclick="nav('airwatch-sync')" id="nav-airwatch-sync"><i class="fa-solid fa-rotate"></i><span class="nav-label">Sync & Status</span></div>
+    </div>
+    <div class="nav-div"></div>
+    <div class="nav-grp-hdr" onclick="toggleGrp(this)"><i class="gi fa-solid fa-network-wired"></i><span>Lansweeper</span><i class="chv fa-solid fa-chevron-down"></i></div>
+    <div class="nav-grp-body">
+      <div class="nav-item" onclick="nav('lansweeper-cfg')" id="nav-lansweeper-cfg"><i class="fa-solid fa-sliders"></i><span class="nav-label">Konfiguration</span></div>
+      <div class="nav-item" onclick="nav('lansweeper-sync')" id="nav-lansweeper-sync"><i class="fa-solid fa-file-import"></i><span class="nav-label">CSV-Import</span></div>
+    </div>
+    <div class="nav-div"></div>
+    <div class="nav-item" onclick="nav('shared')" id="nav-shared"><i class="fa-solid fa-key"></i><span class="nav-label">API / URLs</span></div>
+  </div>
+
+  <!-- File status at bottom of sidebar -->
+  <div class="file-status" id="fileStatus"></div>
+</nav>
+
+<!-- MAIN -->
+<main class="main" id="main">
+
+  <!-- ── HOME ── -->
+  <div class="view active" id="view-home" style="overflow-y:auto;padding:20px;gap:0">
+  <style>
+  /* Dashboard */
+  .db-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .db-stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;cursor:default;transition:border-color .15s}
+  .db-stat:hover{border-color:var(--accent)}
+  .db-stat-val{font-size:28px;font-weight:700;line-height:1;color:var(--text)}
+  .db-stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .db-stat-sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .db-stat-ico{font-size:18px;margin-bottom:6px}
+  /* Section header */
+  .db-sh{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 10px}
+  /* Two-col layout */
+  .db-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+  /* Cards */
+  .db-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .db-card-hdr{padding:10px 14px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+  .db-card-body{padding:10px 14px}
+  /* Status rows */
+  .db-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+  .db-row:last-child{border-bottom:none}
+  .db-row-lbl{flex:1;color:var(--text)}
+  .db-row-val{color:var(--muted);font-size:11px}
+  /* Dot indicators */
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .dot-ok{background:#34d399}.dot-warn{background:#fbbf24}.dot-err{background:#f87171}.dot-muted{background:var(--border)}
+  /* Quick actions */
+  .db-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  .db-action{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:6px;transition:border-color .15s;text-align:left}
+  .db-action:hover{border-color:var(--accent);background:var(--hover)}
+  .db-action i{font-size:16px}
+  .db-action b{font-size:13px;font-weight:600}
+  .db-action span{font-size:11px;color:var(--muted);line-height:1.3}
+  /* Sync status bar */
+  .db-sync-bar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:16px;flex-wrap:wrap}
+  .db-sync-item{display:flex;align-items:center;gap:6px;font-size:12px;padding:0 12px;border-right:1px solid var(--border)}
+  .db-sync-item:last-child{border-right:none}
+  /* Recent log */
+  .db-log-line{font-family:monospace;font-size:11px;padding:3px 0;border-bottom:1px solid var(--border);color:var(--muted)}
+  .db-log-line:last-child{border-bottom:none}
+  .db-log-line.ok{color:#34d399}.db-log-line.err{color:#f87171}.db-log-line.warn{color:#fbbf24}
+  /* Spinner */
+  .db-sp{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* File status */
+  .db-file{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+  .db-file:last-child{border-bottom:none}
+  .db-file-name{flex:1;font-family:monospace}
+  .db-file-time{font-size:10px;color:var(--muted)}
+  </style>
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+    <div>
+      <div style="font-size:18px;font-weight:700">Dashboard</div>
+      <div style="font-size:11px;color:var(--muted)" id="db-updated">Wird geladen...</div>
+    </div>
+    <button onclick="dbLoad()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:6px">
+      <i class="fa-solid fa-rotate-right" id="db-refresh-icon"></i> Aktualisieren
+    </button>
+  </div>
+
+  <!-- KPI Stats -->
+  <div class="db-grid" id="db-stats">
+    <div class="db-stat"><div class="db-stat-ico" style="color:#3b82f6"><i class="fa-solid fa-laptop"></i></div><div class="db-stat-val" id="kpi-notebooks"><div class="db-sp"></div></div><div class="db-stat-lbl">Notebooks</div><div class="db-stat-sub" id="kpi-notebooks-sub">SnipeIT</div></div>
+    <div class="db-stat"><div class="db-stat-ico" style="color:#8b5cf6"><i class="fa-solid fa-mobile-screen-button"></i></div><div class="db-stat-val" id="kpi-phones"><div class="db-sp"></div></div><div class="db-stat-lbl">Telefone</div><div class="db-stat-sub" id="kpi-phones-sub">SnipeIT</div></div>
+    <div class="db-stat"><div class="db-stat-ico" style="color:#06b6d4"><i class="fa-solid fa-tablet-screen-button"></i></div><div class="db-stat-val" id="kpi-ipads"><div class="db-sp"></div></div><div class="db-stat-lbl">iPads</div><div class="db-stat-sub" id="kpi-ipads-sub">SnipeIT</div></div>
+    <div class="db-stat"><div class="db-stat-ico" style="color:#10b981"><i class="fa-solid fa-boxes-stacked"></i></div><div class="db-stat-val" id="kpi-acc"><div class="db-sp"></div></div><div class="db-stat-lbl">Zubehör</div><div class="db-stat-sub" id="kpi-acc-sub">SnipeIT</div></div>
+  </div>
+
+  <!-- Sync Status Bar -->
+  <div class="db-sync-bar" id="db-sync-bar">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-right:4px">Sync</div>
+    <div class="db-sync-item"><div class="dot dot-muted" id="aw-dot"></div><span id="aw-sync-lbl">AirWatch <span class="db-sp"></span></span></div>
+    <div class="db-sync-item"><div class="dot dot-muted" id="ls-dot"></div><span id="ls-sync-lbl">Lansweeper <span class="db-sp"></span></span></div>
+    <div style="flex:1"></div>
+    <button onclick="nav('airwatch-sync')" style="background:none;border:1px solid var(--border);border-radius:5px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;color:var(--text)">AW Sync →</button>
+    <button onclick="nav('lansweeper-sync')" style="background:none;border:1px solid var(--border);border-radius:5px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;color:var(--text);margin-left:6px">LS Import →</button>
+  </div>
+
+  <!-- Two columns -->
+  <div class="db-cols">
+
+    <!-- Left: Generierte Dateien -->
+    <div class="db-card">
+      <div class="db-card-hdr">
+        <span><i class="fa-solid fa-file-code" style="margin-right:6px;color:var(--accent)"></i>Generierte Dateien</span>
+        <button onclick="dbRegenerate()" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;color:var(--text)" id="btn-regen">Alle neu generieren</button>
+      </div>
+      <div class="db-card-body" id="db-files"><div class="db-sp" style="margin:8px auto"></div></div>
+    </div>
+
+    <!-- Right: Schnellaktionen -->
+    <div class="db-card">
+      <div class="db-card-hdr">
+        <span><i class="fa-solid fa-bolt" style="margin-right:6px;color:#fbbf24"></i>Schnellaktionen</span>
+      </div>
+      <div class="db-card-body" style="display:flex;flex-direction:column;gap:8px;padding:10px">
+        <button onclick="nav('distribute')" class="db-action" style="width:100%;border-radius:6px;padding:10px 12px;flex-direction:row;align-items:center;gap:10px">
+          <i class="fa-solid fa-share-nodes" style="color:#3b82f6;flex-shrink:0"></i>
+          <div><b>Installationsseite aufrufen</b><br><span>it-tools.example.com — Bookmarklets verteilen</span></div>
+          <i class="fa-solid fa-arrow-right" style="margin-left:auto;color:var(--muted)"></i>
+        </button>
+        <button onclick="window.open(getToolsUrl(),'_blank')" class="db-action" style="width:100%;border-radius:6px;padding:10px 12px;flex-direction:row;align-items:center;gap:10px">
+          <i class="fa-solid fa-arrow-up-right-from-square" style="color:#10b981;flex-shrink:0"></i>
+          <div><b>Installationsseite öffnen</b><br><span>Externe Seite für Mitarbeiter</span></div>
+          <i class="fa-solid fa-arrow-right" style="margin-left:auto;color:var(--muted)"></i>
+        </button>
+        <button onclick="dbManualSync('airwatch')" class="db-action" style="width:100%;border-radius:6px;padding:10px 12px;flex-direction:row;align-items:center;gap:10px" id="db-btn-aw">
+          <i class="fa-solid fa-rotate" style="color:#8b5cf6;flex-shrink:0"></i>
+          <div><b>AirWatch Sync starten</b><br><span>Fehlende Geräte in SnipeIT anlegen</span></div>
+          <i class="fa-solid fa-arrow-right" style="margin-left:auto;color:var(--muted)"></i>
+        </button>
+        <button onclick="dbManualSync('lansweeper')" class="db-action" style="width:100%;border-radius:6px;padding:10px 12px;flex-direction:row;align-items:center;gap:10px" id="db-btn-ls">
+          <i class="fa-solid fa-file-import" style="color:#06b6d4;flex-shrink:0"></i>
+          <div><b>Lansweeper CSV Import</b><br><span>CSV einlesen und Notebooks anlegen</span></div>
+          <i class="fa-solid fa-arrow-right" style="margin-left:auto;color:var(--muted)"></i>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Log-Ausgabe Sync -->
+  <div class="db-card" id="db-log-card" style="display:none;margin-bottom:16px">
+    <div class="db-card-hdr">
+      <span><i class="fa-solid fa-terminal" style="margin-right:6px"></i><span id="db-log-title">Sync Log</span></span>
+      <button onclick="document.getElementById('db-log-card').style.display='none'" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px">✕</button>
+    </div>
+    <div id="db-log-out" style="font-family:monospace;font-size:11px;padding:12px 14px;background:#0a0a0f;color:#94a3b8;max-height:220px;overflow-y:auto;white-space:pre-wrap"></div>
+  </div>
+
+  </div>
+
+  <!-- ── LABEL: Label-Druck ── -->
+  <div class="view" id="view-label" style="overflow-y:auto;padding:20px;align-content:start">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px"><i class="fa-solid fa-tag" style="color:var(--accent);margin-right:6px"></i>Label Druck — Zebra ZD410</div>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:16px">50×25 mm · ZPL II · TCP Port 9100. Etikett: QR-Code + Bezeichnung + Standort + Ausgabedatum.</div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;max-width:500px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px">Drucker</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div class="fr" style="grid-column:1/3"><label>Drucker IP-Adresse</label><input id="lb-ip" type="text" placeholder="z.B. 10.0.0.50" oninput="debounceSave('label')"></div>
+        <div class="fr"><label>Port</label><input id="lb-port" type="number" value="9100" oninput="debounceSave('label')"></div>
+        <div class="fr"><label>Standard-Kopien</label><input id="lb-copies" type="number" value="1" min="1" max="10" oninput="debounceSave('label')"></div>
+      </div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:12px">
+        <button onclick="labelTest()" style="background:var(--accent);border:none;color:white;padding:8px 18px;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer">
+          <i class="fa-solid fa-print"></i> Testlabel drucken
+        </button>
+        <span id="lb-test-result" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;max-width:500px;font-size:12px;color:var(--muted)">
+      <i class="fa-solid fa-circle-info" style="margin-right:6px"></i>
+      Etikett-Inhalt ist fix: <b>QR-Code</b> (Link zum Zubehör in SnipeIT) · <b>Bezeichnung</b> · <b>Standort</b> · <b>Ausgabedatum</b> (heute).
+      Geöffnet wird die Seite über das Bookmarklet auf <code>it-tools.example.com</code>.
+    </div>
+  </div>
+
+  <!-- ── AIRWATCH: Konfiguration ── -->
+  <div class="view" id="view-airwatch-cfg" style="overflow-y:auto;padding:20px;align-content:start">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px"><i class="fa-solid fa-mobile-screen-button" style="color:var(--accent);margin-right:6px"></i>AirWatch MDM — Konfiguration</div>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:16px">Verbindung zum VMware Workspace ONE / AirWatch MDM-Server.</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;max-width:520px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px">Server</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fr" style="grid-column:1/3"><label>AirWatch URL</label><input id="aw-url" type="text" placeholder="https://192.168.1.50" oninput="debounceSave('airwatch')"></div>
+        <div class="fr"><label>Benutzername</label><input id="aw-user" type="text" oninput="debounceSave('airwatch')"></div>
+        <div class="fr"><label>Passwort</label><input id="aw-pass" type="password" oninput="debounceSave('airwatch')"></div>
+        <div class="fr" style="grid-column:1/3"><label>Tenant Code (aw-tenant-code Header)</label><input id="aw-tenant" type="text" oninput="debounceSave('airwatch')"></div>
+        <div class="fr"><label>Seitengröße (Devices pro Abfrage)</label><input id="aw-pagesize" type="number" value="500" min="10" max="2000" oninput="debounceSave('airwatch')"></div>
+        <div class="fr" style="align-items:center">
+          <label style="margin-bottom:8px">SSL-Zertifikat</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+            <input type="checkbox" id="aw-ssl" onchange="debounceSave('airwatch')" style="accent-color:var(--accent);width:15px;height:15px">
+            <span>Prüfen (für self-signed: deaktiviert lassen)</span>
+          </label>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+        <button onclick="awTest()" style="background:var(--accent);border:none;color:white;padding:8px 18px;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer">
+          <i class="fa-solid fa-plug"></i> Verbindung testen
+        </button>
+        <span id="aw-test-result" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;max-width:520px;font-size:12px;color:var(--muted)">
+      <i class="fa-solid fa-circle-info" style="margin-right:6px"></i>
+      Bookmarklet <b>AirWatch suchen</b> öffnet auf einer SnipeIT Asset-Seite (<code>/hardware/{id}</code>) die AirWatch-Gerätedaten zur Seriennummer des Assets.
+    </div>
+  </div>
+
+  <!-- ── AIRWATCH: Sync & Status ── -->
+  <div class="view" id="view-airwatch-sync" style="overflow-y:auto;padding:20px;align-content:start">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px"><i class="fa-solid fa-rotate" style="color:var(--accent);margin-right:6px"></i>AirWatch — Sync & Status</div>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:16px">Vergleicht AirWatch-Geräte mit SnipeIT. Legt fehlende Geräte in SnipeIT an.</div>
+
+    <!-- Status-Karte -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;max-width:640px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:600">Sync-Status</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="awLoadStatus()" style="background:none;border:1px solid var(--border);border-radius:5px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text)"><i class="fa-solid fa-rotate-right"></i> Laden</button>
+          <button onclick="awDryRun()" style="background:#7a3a00;border:none;color:white;padding:6px 16px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer" id="btn-aw-dry"><i class="fa-solid fa-flask"></i> Dry Run</button>
+          <button id="btn-aw-sync" onclick="awSync()" style="background:#1a3a6b;border:none;color:white;padding:6px 16px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer"><i class="fa-solid fa-rotate"></i> Sync starten</button>
+        </div>
+      </div>
+      <div id="aw-status-content" style="font-size:12px;color:var(--muted);text-align:center;padding:20px">Klicke „Laden" um den aktuellen Status abzurufen.</div>
+    </div>
+
+    <!-- Geräte nur in AirWatch -->
+    <div id="aw-only-aw" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;max-width:640px;margin-bottom:14px">
+      <div style="background:#3a1a00;color:#fbbf24;padding:10px 14px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span id="aw-only-aw-title">In AirWatch, nicht in SnipeIT</span>
+      </div>
+      <div id="aw-only-aw-list" style="max-height:240px;overflow-y:auto"></div>
+    </div>
+
+    <!-- Log-Fenster -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;max-width:640px">
+      <div style="background:#0f172a;color:#64748b;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px">
+        <i class="fa-solid fa-terminal"></i> Sync-Log
+      </div>
+      <div id="aw-log" style="background:#0f172a;color:#94a3b8;padding:12px 14px;font-family:monospace;font-size:11px;min-height:80px;max-height:260px;overflow-y:auto;white-space:pre-wrap">Noch kein Sync ausgeführt.</div>
+    </div>
+
+    <!-- Import-History -->
+    <div style="margin-top:14px;max-width:640px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">Letzte Syncs</div>
+      <div id="aw-history" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        <div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">Lade...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LANSWEEPER: Konfiguration ── -->
+  <div class="view" id="view-lansweeper-cfg" style="overflow-y:auto;padding:20px;align-content:start">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px"><i class="fa-solid fa-network-wired" style="color:var(--accent);margin-right:6px"></i>Lansweeper — CSV-Import Konfiguration</div>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:16px">Automatischer Import von Lansweeper CSV-Exports in SnipeIT.</div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;max-width:520px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px">CSV-Quelle</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fr" style="grid-column:1/3"><label>Verzeichnis im Container</label><input id="ls-path" type="text" placeholder="/data/BRUT" oninput="debounceSave('lansweeper')"></div>
+        <div class="fr"><label>Dateiname-Muster (glob)</label><input id="ls-pattern" type="text" placeholder="web*.csv" oninput="debounceSave('lansweeper')"></div>
+        <div class="fr"><label>Trennzeichen</label><input id="ls-delim" type="text" placeholder=";" maxlength="2" style="width:60px" oninput="debounceSave('lansweeper')"></div>
+        <div class="fr"><label>Encoding</label>
+          <select id="ls-enc" onchange="debounceSave('lansweeper')">
+            <option value="UTF-8">UTF-8</option>
+            <option value="Windows-1252">Windows-1252</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;max-width:520px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px">Spaltenzuordnung CSV → SnipeIT</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fr"><label>Seriennummer</label><input id="ls-col-sn" type="text" placeholder="Seriennummer" oninput="debounceSave('lansweeper')"></div>
+        <div class="fr"><label>Asset-Name</label><input id="ls-col-name" type="text" placeholder="AssetName" oninput="debounceSave('lansweeper')"></div>
+        <div class="fr"><label>Benutzer</label><input id="ls-col-user" type="text" placeholder="Benutzer/Anmeldung" oninput="debounceSave('lansweeper')"></div>
+        <div class="fr"><label>Modell</label><input id="ls-col-model" type="text" placeholder="Modell" oninput="debounceSave('lansweeper')"></div>
+        <div class="fr"><label>Hersteller</label><input id="ls-col-mfr" type="text" placeholder="Hersteller" oninput="debounceSave('lansweeper')"></div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;max-width:520px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px">SnipeIT Defaults für neue Assets</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fr"><label>Kategorie-ID (Notebooks)</label><input id="ls-cat" type="number" value="4" oninput="debounceSave('lansweeper')"></div>
+        <div class="fr"><label>Status-ID</label><input id="ls-status" type="number" value="1" oninput="debounceSave('lansweeper')"></div>
+        <div class="fr" style="grid-column:1/3"><label>Standard-Modell-ID (0 = aus CSV ermitteln)</label><input id="ls-model" type="number" value="0" oninput="debounceSave('lansweeper')"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LANSWEEPER: CSV-Import ── -->
+  <div class="view" id="view-lansweeper-sync" style="overflow-y:auto;padding:20px;align-content:start">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px"><i class="fa-solid fa-file-import" style="color:var(--accent);margin-right:6px"></i>Lansweeper — CSV-Import</div>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:16px">Liest CSV-Dateien aus dem konfigurierten Verzeichnis und legt fehlende Notebooks in SnipeIT an.</div>
+
+    <!-- Status-Karte -->
+    <div id="ls-status-card" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;max-width:640px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:600">CSV-Dateien</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="lsLoadStatus()" style="background:none;border:1px solid var(--border);border-radius:5px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text)"><i class="fa-solid fa-rotate-right"></i> Status</button>
+          <button onclick="lsDryRun()" style="background:#7a3a00;border:none;color:white;padding:6px 16px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer" id="btn-ls-dry"><i class="fa-solid fa-flask"></i> Dry Run</button>
+          <button id="btn-ls-sync" onclick="lsSync()" style="background:#1a4a2e;border:none;color:white;padding:6px 16px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer"><i class="fa-solid fa-file-import"></i> Import starten</button>
+        </div>
+      </div>
+      <div id="ls-status-content" style="font-size:12px;color:var(--muted)">Klicke „Status" um die verfügbaren CSV-Dateien anzuzeigen.</div>
+    </div>
+
+    <!-- Log-Fenster -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;max-width:640px;margin-bottom:14px">
+      <div style="background:#0a1a0a;color:#4a7a4a;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px">
+        <i class="fa-solid fa-terminal"></i> Import-Log
+      </div>
+      <div id="ls-log" style="background:#0a1a0a;color:#86efac;padding:12px 14px;font-family:monospace;font-size:11px;min-height:80px;max-height:300px;overflow-y:auto;white-space:pre-wrap">Noch kein Import ausgeführt.</div>
+    </div>
+
+    <!-- Import-History -->
+    <div style="max-width:640px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">Import-Verlauf</div>
+      <div id="ls-history" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        <div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">Lade...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SHARED: API / URLs ── -->
+  <div class="view" id="view-shared" style="overflow-y:auto;padding:20px;align-content:start">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px">API &amp; URLs</div>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:16px">Gilt für beide Tools. Änderungen sofort gespeichert und angewendet.</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;max-width:500px;display:flex;flex-direction:column;gap:10px">
+      <div class="fr"><label>SnipeIT URL</label><input id="s-url" type="text" oninput="debounceSave('shared')"></div>
+      <div class="fr"><label>Tools URL (nginx, wo Mitarbeiter die Seite aufrufen)</label><input id="s-tools" type="text" oninput="debounceSave('shared');updateBMs()"></div>
+      <div class="fr"><label>API Token <span style="font-weight:400;color:var(--muted2)">(read-only reicht)</span></label>
+        <div class="tkn-wrap">
+          <input id="s-token" type="password" oninput="debounceSave('shared')">
+          <button class="ic-btn" onclick="toggleToken('s-token','eye1')"><i id="eye1" class="fa-solid fa-eye"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MAIL ── -->
+  <div class="view tool-view" id="view-mail">
+    <div class="cfg-panel">
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)"><i class="fa-solid fa-envelope si"></i><span class="st">E-Mail Einstellungen</span><i class="fa-solid fa-chevron-down sc"></i></div>
+        <div class="sec-body">
+          <div class="two-col">
+            <div class="fr"><label>An (To)</label><input id="m-to" type="text" oninput="debounceSave('mail');updateMailPreview()"></div>
+            <div class="fr"><label>CC</label><input id="m-cc" type="text" oninput="debounceSave('mail');updateMailPreview()"></div>
+          </div>
+          <div class="fr"><label>Absender-Name</label><input id="m-sender" type="text" oninput="debounceSave('mail');updateMailPreview()"></div>
+          <div class="fr"><label>Button-Beschriftung (Lesezeichen)</label><input id="m-btn" type="text" oninput="debounceSave('mail');updateBMs()"></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)"><i class="fa-solid fa-user si"></i><span class="st">Felder — Mitarbeiter</span><i class="fa-solid fa-chevron-down sc"></i></div>
+        <div class="sec-body" id="mail-f-mitarbeiter"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)"><i class="fa-solid fa-laptop si"></i><span class="st">Felder — Asset</span><i class="fa-solid fa-chevron-down sc"></i></div>
+        <div class="sec-body" id="mail-f-asset"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)"><i class="fa-solid fa-receipt si"></i><span class="st">Felder — Beschaffung</span><i class="fa-solid fa-chevron-down sc"></i></div>
+        <div class="sec-body" id="mail-f-beschaffung"></div>
+      </div>
+    </div>
+    <div class="prev-panel">
+      <div class="prev-lbl"><i class="fa-solid fa-eye"></i>Live-Vorschau — Outlook Mail</div>
+      <div class="mail-prev">
+        <div class="mail-hdr">
+          <div class="mhr"><span class="mk">An:</span><span id="pv-to"></span></div>
+          <div class="mhr"><span class="mk">CC:</span><span id="pv-cc"></span></div>
+          <div class="mhr"><span class="mk">Betreff:</span><span class="ms">[Asset-Ausgabe] NB-1234 → John Doe</span></div>
+        </div>
+        <div class="mail-body" id="pv-body"></div>
+      </div>
+    </div>
+    <div class="tool-footer">
+      <a id="bm-mail-cfg" class="bm-drag" style="background:var(--accent)" href="#"
+         onclick="alert('Auf die Lesezeichen-Leiste ziehen');return false;">
+        <i class="fa-solid fa-bookmark"></i>Admin-Test Bookmarklet
+      </a>
+      <span style="font-size:11px;color:var(--muted);flex:1">Änderungen werden automatisch gespeichert &amp; sofort angewendet</span>
+      <span id="mail-gen-status" style="font-size:11px;color:var(--accent2);display:none"><i class="fa-solid fa-circle-check"></i> snipeit-bm.html aktualisiert</span>
+    </div>
+  </div>
+
+  <!-- ── PDF DOC ── -->
+  <div class="view tool-view" id="view-pdf">
+    <div class="cfg-panel">
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)"><i class="fa-solid fa-building si"></i><span class="st">Dokument</span><i class="fa-solid fa-chevron-down sc"></i></div>
+        <div class="sec-body">
+          <div class="fr"><label>Firmenname</label><input id="p-co" type="text" oninput="debounceSave('pdf');updatePdfPreview()"></div>
+          <div class="fr"><label>Dokument-Titel</label><input id="p-title" type="text" oninput="debounceSave('pdf');updatePdfPreview()"></div>
+          <div class="fr"><label>Fußzeile</label><input id="p-footer" type="text" oninput="debounceSave('pdf');updatePdfPreview()"></div>
+          <div class="fr"><label>Hinweistext</label><textarea id="p-note" oninput="debounceSave('pdf');updatePdfPreview()"></textarea></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)"><i class="fa-solid fa-layer-group si"></i><span class="st">Kategorien</span><i class="fa-solid fa-chevron-down sc"></i></div>
+        <div class="sec-body">
+          <label class="cb-row"><input type="checkbox" id="p-nb" onchange="debounceSave('pdf');updatePdfPreview()"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-solid fa-laptop" style="color:var(--accent);margin-right:6px"></i>Notebook</span><span class="cb-key">cat 4</span></label>
+          <label class="cb-row"><input type="checkbox" id="p-ph" onchange="debounceSave('pdf');updatePdfPreview()"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-solid fa-mobile-screen" style="color:var(--accent2);margin-right:6px"></i>Telefon</span><span class="cb-key">cat 5</span></label>
+          <label class="cb-row"><input type="checkbox" id="p-ip" onchange="debounceSave('pdf');updatePdfPreview()"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-solid fa-tablet-screen-button" style="color:var(--warn);margin-right:6px"></i>iPad</span><span class="cb-key">cat 2</span></label>
+          <label class="cb-row"><input type="checkbox" id="p-sim" onchange="debounceSave('pdf');updatePdfPreview()"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-solid fa-sim-card" style="color:var(--purple);margin-right:6px"></i>SIM-Karte</span><span class="cb-key" id="sim-badge">cat 6</span></label>
+          <div class="fr" style="margin-top:4px"><label>SIM Kategorie-ID <span style="font-weight:400;color:var(--muted2)">(SnipeIT → Admin → Categories prüfen)</span></label>
+            <input id="p-simid" type="text" style="width:80px" oninput="debounceSave('pdf');document.getElementById('sim-badge').textContent='cat '+this.value">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="prev-panel">
+      <div class="prev-lbl"><i class="fa-solid fa-eye"></i>Live-Vorschau — A4 Dokument</div>
+      <div class="a4" id="pv-pdf"></div>
+    </div>
+    <div class="tool-footer">
+      <a id="bm-pdf-cfg" class="bm-drag" style="background:var(--purple)" href="#"
+         onclick="alert('Auf die Lesezeichen-Leiste ziehen — auf User-Seite /users/{id} verwenden');return false;">
+        <i class="fa-solid fa-file-pdf"></i>Admin-Test Bookmarklet
+      </a>
+      <span style="font-size:11px;color:var(--muted);flex:1">Automatisch gespeichert</span>
+      <button class="btn btn-ghost" onclick="nav('pdf-cats')"><i class="fa-solid fa-list-check"></i>Felder konfigurieren →</button>
+    </div>
+  </div>
+
+  <!-- ── PDF CATS ── -->
+  <div class="view tool-view" id="view-pdf-cats">
+    <div class="cfg-panel">
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)"><i class="fa-solid fa-laptop si"></i><span class="st">Felder — Notebook</span><i class="fa-solid fa-chevron-down sc"></i></div>
+        <div class="sec-body" id="pdf-f-notebook"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)"><i class="fa-solid fa-mobile-screen si"></i><span class="st">Felder — Telefon</span><i class="fa-solid fa-chevron-down sc"></i></div>
+        <div class="sec-body" id="pdf-f-phone"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)"><i class="fa-solid fa-tablet-screen-button si"></i><span class="st">Felder — iPad</span><i class="fa-solid fa-chevron-down sc"></i></div>
+        <div class="sec-body" id="pdf-f-ipad"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)"><i class="fa-solid fa-sim-card si"></i><span class="st">Felder — SIM-Karte</span><i class="fa-solid fa-chevron-down sc"></i></div>
+        <div class="sec-body" id="pdf-f-sim"></div>
+      </div>
+    </div>
+    <div class="prev-panel">
+      <div class="prev-lbl"><i class="fa-solid fa-eye"></i>Live-Vorschau</div>
+      <div class="a4" id="pv-pdf2"></div>
+    </div>
+    <div class="tool-footer">
+      <button class="btn btn-ghost" onclick="nav('pdf')"><i class="fa-solid fa-arrow-left"></i>Zurück</button>
+      <span style="font-size:11px;color:var(--muted);flex:1">Automatisch gespeichert</span>
+    </div>
+  </div>
+
+  <!-- ── CUSTOM FIELDS ── -->
+  <div class="view tool-view" id="view-fields" style="grid-template-columns:1fr 360px">
+
+    <!-- Left: editable table -->
+    <div class="cfg-panel" style="overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:3px">Custom Field Mapping</div>
+        <div style="color:var(--muted);font-size:12px">Mappt logische Namen auf SnipeIT <code style="font-family:var(--mono);background:var(--surface2);padding:1px 5px;border-radius:3px">custom_fields</code> Keys. Jede Zeile einzeln speichern.</div>
+      </div>
+
+      <!-- Field rows -->
+      <div id="cf-rows" style="display:flex;flex-direction:column;gap:10px"></div>
+
+      <!-- Add new field -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px"><i class="fa-solid fa-plus" style="margin-right:6px"></i>Neues Feld</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div class="fr"><label>logical_name</label><input id="cf-new-ln"  type="text" placeholder="z.B. kst"></div>
+          <div class="fr"><label>Label (Anzeige)</label><input id="cf-new-lbl" type="text" placeholder="z.B. Kostenstelle"></div>
+          <div class="fr"><label>SnipeIT Key</label><input id="cf-new-sk"  type="text" placeholder="_snipeit_kst_5"></div>
+          <div class="fr"><label>Fallback Key (optional)</label><input id="cf-new-fb"  type="text" placeholder="leer lassen wenn nicht nötig"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="fr" style="flex:0 0 auto">
+            <label>Tool</label>
+            <select id="cf-new-tool" style="background:#1a1f2e;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 9px;outline:none">
+              <option value="both">both</option>
+              <option value="mail">mail</option>
+              <option value="pdf">pdf</option>
+            </select>
+          </div>
+          <button class="btn btn-blue" style="margin-top:16px" onclick="addNewField()"><i class="fa-solid fa-plus"></i>Hinzufügen &amp; Speichern</button>
+        </div>
+      </div>
+
+      <div class="note-box">
+        <b>Key ermitteln:</b> Rechte Seite → Asset-ID eingeben → Preview zeigt alle verfügbaren Keys direkt aus SnipeIT.
+      </div>
+    </div>
+
+    <!-- Right: live preview -->
+    <div style="border-left:1px solid var(--border);background:#111318;overflow-y:auto;display:flex;flex-direction:column">
+
+      <!-- Asset ID input -->
+      <div style="padding:16px;border-bottom:1px solid var(--border)">
+        <div class="prev-lbl"><i class="fa-solid fa-vial" style="color:var(--warn)"></i>Live-Test mit Asset</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input id="cf-test-id" type="text" placeholder="Asset-ID (z.B. 42)"
+            style="flex:1;background:#1a1f2e;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:13px;padding:8px 10px;outline:none"
+            onkeydown="if(event.key==='Enter')testAsset()">
+          <button class="btn btn-blue" onclick="testAsset()" style="white-space:nowrap"><i class="fa-solid fa-play"></i>Laden</button>
+        </div>
+        <div id="cf-test-status" style="font-size:11px;color:var(--muted);margin-top:6px"></div>
+      </div>
+
+      <!-- Preview rows -->
+      <div style="padding:14px;flex:1;overflow-y:auto">
+        <div id="cf-preview-rows" style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0">Asset-ID eingeben und Laden klicken</div>
+        </div>
+
+        <!-- Raw custom_fields dump -->
+        <div id="cf-raw-section" style="display:none;margin-top:16px">
+          <div style="font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Alle verfügbaren custom_fields Keys</div>
+          <div id="cf-raw-keys" style="display:flex;flex-direction:column;gap:4px"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── DISTRIBUTE ── -->
+  <div class="view tool-view" id="view-distribute">
+    <div class="cfg-panel">
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)"><i class="fa-solid fa-palette si"></i><span class="st">Seiten-Einstellungen</span><i class="fa-solid fa-chevron-down sc"></i></div>
+        <div class="sec-body">
+          <div class="fr"><label>Seitentitel</label><input id="d-title" type="text" oninput="debounceSave('distribute');updateDistPreview()"></div>
+          <div class="fr"><label>Untertitel</label><input id="d-sub" type="text" oninput="debounceSave('distribute');updateDistPreview()"></div>
+          <div class="fr"><label>Fußzeile</label><input id="d-footer" type="text" oninput="debounceSave('distribute');updateDistPreview()"></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)"><i class="fa-solid fa-bookmark si"></i><span class="st">Lesezeichen anzeigen</span><i class="fa-solid fa-chevron-down sc"></i></div>
+        <div class="sec-body">
+          <label class="cb-row"><input type="checkbox" id="d-mail" onchange="debounceSave('distribute');updateDistPreview()"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-solid fa-envelope-open-text" style="color:var(--accent);margin-right:6px"></i>Outlook Mail <span style="font-size:10px;color:var(--muted)">/hardware/{id}</span></span></label>
+          <label class="cb-row"><input type="checkbox" id="d-pdf"  onchange="debounceSave('distribute');updateDistPreview()"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-solid fa-file-pdf" style="color:var(--purple);margin-right:6px"></i>Geräte-Ausgabe PDF <span style="font-size:10px;color:var(--muted)">/users/{id}</span></span></label>
+          <label class="cb-row"><input type="checkbox" id="d-sign" onchange="debounceSave('distribute');updateDistPreview()"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-solid fa-pen-nib" style="color:#7c5cbf;margin-right:6px"></i>Übergabe signieren <span style="font-size:10px;color:var(--muted)">/users/{id}</span></span></label>
+          <label class="cb-row"><input type="checkbox" id="d-copy" onchange="debounceSave('distribute');updateDistPreview()"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-solid fa-copy" style="color:var(--muted);margin-right:6px"></i>Kopierfunktion anzeigen</span></label>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)"><i class="fa-solid fa-globe si"></i><span class="st">Browser-Anleitungen</span><i class="fa-solid fa-chevron-down sc"></i></div>
+        <div class="sec-body">
+          <label class="cb-row"><input type="checkbox" id="d-chrome"  onchange="debounceSave('distribute');updateDistPreview()"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-brands fa-chrome" style="margin-right:6px"></i>Chrome</span></label>
+          <label class="cb-row"><input type="checkbox" id="d-edge"    onchange="debounceSave('distribute');updateDistPreview()"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-brands fa-edge" style="margin-right:6px"></i>Edge</span></label>
+          <label class="cb-row"><input type="checkbox" id="d-firefox" onchange="debounceSave('distribute');updateDistPreview()"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-brands fa-firefox-browser" style="margin-right:6px"></i>Firefox</span></label>
+          <label class="cb-row"><input type="checkbox" id="d-safari"  onchange="debounceSave('distribute');updateDistPreview()"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-brands fa-safari" style="margin-right:6px"></i>Safari</span></label>
+        </div>
+      </div>
+    </div>
+    <div class="prev-panel">
+      <div class="prev-lbl"><i class="fa-solid fa-eye"></i>Vorschau — Mitarbeiter-Installationsseite</div>
+      <div class="dist-wrap"><div id="pv-dist"></div></div>
+      <div class="note-box">
+        <b>URL für Mitarbeiter:</b> <span id="d-url-hint" style="font-family:var(--mono);color:var(--accent2)">http://tools.macit.lan/install.html</span>
+      </div>
+    </div>
+    <div class="tool-footer">
+      <span style="font-size:11px;color:var(--muted);flex:1">Automatisch gespeichert &amp; install.html sofort aktualisiert</span>
+    </div>
+  </div>
+  <!-- ── SIGN CONFIG ── -->
+  <div class="view" id="view-sign" style="overflow-y:auto;padding:20px;align-content:start">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px">Elektronische Signatur</div>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:16px">Konfiguriert <code>sign.html</code> — die Seite die beim Signatur-Bookmarklet öffnet.</div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;max-width:560px;display:flex;flex-direction:column;gap:12px;margin-bottom:16px">
+      <div class="fr"><label>Bestätigungstext</label><textarea id="sg-text" rows="4" oninput="debounceSave('sign')" style="background:#1a1f2e;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--sans);font-size:12px;padding:8px 10px;outline:none;resize:vertical;width:100%"></textarea></div>
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Kategorien anzeigen</div>
+        <label class="cb-row"><input type="checkbox" id="sg-nb"  onchange="debounceSave('sign')"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-solid fa-laptop" style="color:var(--accent);margin-right:6px"></i>Notebook</span><span class="cb-key">cat 4</span></label>
+        <label class="cb-row"><input type="checkbox" id="sg-ph"  onchange="debounceSave('sign')"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-solid fa-mobile-screen" style="color:var(--accent2);margin-right:6px"></i>Telefon</span><span class="cb-key">cat 5</span></label>
+        <label class="cb-row"><input type="checkbox" id="sg-ip"  onchange="debounceSave('sign')"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-solid fa-tablet-screen-button" style="color:var(--warn);margin-right:6px"></i>iPad</span><span class="cb-key">cat 2</span></label>
+        <label class="cb-row"><input type="checkbox" id="sg-sim" onchange="debounceSave('sign')"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label"><i class="fa-solid fa-sim-card" style="color:var(--purple);margin-right:6px"></i>SIM-Karte</span></label>
+      </div>
+      <label class="cb-row"><input type="checkbox" id="sg-upload" onchange="debounceSave('sign')"><span class="cb-box g"><i class="fa-solid fa-check"></i></span><span class="cb-label">Signatur automatisch zu jedem Asset in SnipeIT hochladen</span></label>
+    </div>
+
+    <div class="note-box" style="max-width:560px;margin-bottom:16px">
+      <b>Bookmarklet (auf User-Seite /users/{id}):</b><br>
+      Einmalig auf die Lesezeichen-Leiste ziehen — funktioniert dann bei jedem Mitarbeiter:
+      <div style="margin-top:8px">
+        <a id="bm-sign-cfg" class="bm-drag" style="background:#7c5cbf;font-size:12px" href="#"
+           onclick="alert('Auf die Lesezeichen-Leiste ziehen — auf /users/{id} verwenden');return false;">
+          <i class="fa-solid fa-pen-nib"></i>Signatur
+        </a>
+      </div>
+    </div>
+
+    <div style="max-width:560px">
+      <a id="sign-open-link" href="#" target="_blank"
+         style="display:inline-flex;align-items:center;gap:7px;padding:9px 18px;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:12px;font-weight:600;text-decoration:none;transition:border-color .15s"
+         onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <i class="fa-solid fa-arrow-up-right-from-square" style="color:var(--accent)"></i>
+        sign.html öffnen (Test mit ?user_id=1)
+      </a>
+    </div>
+  </div>
+
+  <!-- ── SIGN AUDIT LOG ── -->
+  <div class="view" id="view-sign-log" style="overflow-y:auto;padding:20px;align-content:start">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px">Audit-Trail — Elektronische Signaturen</div>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:16px">Alle gespeicherten Unterschriften. Letzte 100 Einträge.</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px" id="sign-log-table">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Datum</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Mitarbeiter</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Abteilung</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Assets</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Status</th>
+        </tr></thead>
+        <tbody id="sign-log-body"><tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted)">Lade...</td></tr></tbody>
+      </table>
+    </div>
+    <button class="btn btn-ghost" onclick="loadSignLog()"><i class="fa-solid fa-rotate"></i>Aktualisieren</button>
+  </div>
+
+</main>
+</div><!-- body -->
+</div><!-- app -->
+
+<div id="toast"><i class="fa-solid fa-circle-check"></i><span id="toast-msg">OK</span></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════
+//  API CLIENT
+// ══════════════════════════════════════════════════════════════════════════
+var API = '/api';
+var S = {};   // local state mirror
+var CF = [];  // custom fields array
+
+async function parseResp(r){
+  var t = await r.text();
+  var s = t.indexOf('{');
+  if(s > 0) t = t.substring(s);
+  if(!t || t.trim() === '') return {ok:false, error:'Leere Antwort vom Server'};
+  try { return JSON.parse(t); }
+  catch(e){ return {ok:false, error:'JSON Parse Error: '+t.substring(0,120)}; }
+}
+async function apiGet(path){
+  var r = await fetch(API + path);
+  return parseResp(r);
+}
+async function apiPost(path, data){
+  var r = await fetch(API + path, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  });
+  return parseResp(r);
+}
+async function apiDelete(path){
+  var r = await fetch(API + path, {method:'DELETE'});
+  return parseResp(r);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  INIT — load config from DB
+// ══════════════════════════════════════════════════════════════════════════
+async function init(){
+  showPill('saving','Verbinde...');
+  try {
+    var res = await apiGet('/config');
+    if(!res.ok) throw new Error(res.error);
+    S = res.data;
+    var fr = await apiGet('/fields');
+    CF = fr.data || [];
+    bindAll();
+    buildMailFields();
+    buildPdfFields();
+    buildCfTable();
+    updateAllPreviews();
+    updateBMs();
+    showPill('ok','Verbunden');
+    loadFileStatus();
+  } catch(e) {
+    showPill('err','Fehler: '+e.message);
+    showToast('Verbindung zum PHP-Backend fehlgeschlagen: '+e.message, 'err');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  SAVE — debounced, section-specific
+// ══════════════════════════════════════════════════════════════════════════
+var saveTimers = {};
+function debounceSave(section){
+  clearTimeout(saveTimers[section]);
+  saveTimers[section] = setTimeout(function(){ saveSection(section); }, 600);
+}
+
+async function saveSection(section){
+  collectSection(section);
+  showPill('saving','Speichert...');
+  var dot = document.getElementById('saveDot');
+  dot.classList.add('show');
+  try {
+    var res = await apiPost('/config', {section: section, data: S[section]});
+    if(!res.ok) throw new Error(res.error);
+    showPill('ok','Gespeichert');
+    showToast((section === 'mail' ? 'snipeit-bm.html' :
+               section === 'pdf'  ? 'snipeit-ausgabe-pdf.html' :
+               section === 'distribute' ? 'install.html' :
+               section === 'label' ? 'label-print.html' : 'Konfiguration') + ' aktualisiert', 'ok');
+    loadFileStatus();
+    // Show inline status on mail view
+    if(section === 'mail'){
+      var el = document.getElementById('mail-gen-status');
+      if(el){ el.style.display='flex'; clearTimeout(el._t); el._t=setTimeout(function(){el.style.display='none';},3000); }
+    }
+  } catch(e) {
+    showPill('err','Fehler');
+    showToast('Fehler beim Speichern: '+e.message, 'err');
+  }
+  setTimeout(function(){ dot.classList.remove('show'); }, 1500);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  COLLECT STATE FROM INPUTS
+// ══════════════════════════════════════════════════════════════════════════
+function collectSection(sec){
+  if(!S[sec]) S[sec] = {};
+  var g = function(id){ var el=document.getElementById(id); return el?el.value:''; };
+  var gc = function(id){ var el=document.getElementById(id); return el?el.checked:false; };
+
+  if(sec === 'shared'){
+    S.shared.snipeitUrl = g('s-url');
+    S.shared.toolsUrl   = g('s-tools');
+    S.shared.apiToken   = g('s-token');
+  }
+  if(sec === 'mail'){
+    S.mail.mailTo     = g('m-to');
+    S.mail.mailCc     = g('m-cc');
+    S.mail.senderName = g('m-sender');
+    S.mail.btnLabel   = g('m-btn');
+    // collect field checkboxes
+    if(!S.mail.fields) S.mail.fields = {};
+    ['mitarbeiter','asset','beschaffung'].forEach(function(grp){
+      if(!S.mail.fields[grp]) S.mail.fields[grp] = {};
+      MAIL_FIELDS[grp].forEach(function(f){
+        var el = document.getElementById('mf-'+grp+'-'+f.k);
+        if(el) S.mail.fields[grp][f.k] = el.checked ? 1 : 0;
+      });
+    });
+  }
+  if(sec === 'pdf'){
+    S.pdf.company   = g('p-co');
+    S.pdf.docTitle  = g('p-title');
+    S.pdf.footer    = g('p-footer');
+    S.pdf.note      = g('p-note');
+    S.pdf.simCatId  = parseInt(g('p-simid')) || 6;
+    S.pdf.cats = {
+      notebook: gc('p-nb') ? 1 : 0,
+      phone:    gc('p-ph') ? 1 : 0,
+      ipad:     gc('p-ip') ? 1 : 0,
+      sim:      gc('p-sim') ? 1 : 0
+    };
+    if(!S.pdf.fields) S.pdf.fields = {};
+    ['notebook','phone','ipad','sim'].forEach(function(cat){
+      if(!S.pdf.fields[cat]) S.pdf.fields[cat] = {};
+      PDF_FIELDS[cat].forEach(function(f){
+        var el = document.getElementById('pf-'+cat+'-'+f.k);
+        if(el) S.pdf.fields[cat][f.k] = el.checked ? 1 : 0;
+      });
+    });
+  }
+  if(sec === 'distribute'){
+    S.distribute.title    = g('d-title');
+    S.distribute.subtitle = g('d-sub');
+    S.distribute.footer   = g('d-footer');
+    S.distribute.showMail = gc('d-mail') ? 1 : 0;
+    S.distribute.showPdf  = gc('d-pdf') ? 1 : 0;
+    S.distribute.showSign = gc('d-sign') ? 1 : 0;
+    S.distribute.showCopy = gc('d-copy') ? 1 : 0;
+    var browsers = [];
+    if(gc('d-chrome'))  browsers.push('chrome');
+    if(gc('d-edge'))    browsers.push('edge');
+    if(gc('d-firefox')) browsers.push('firefox');
+    if(gc('d-safari'))  browsers.push('safari');
+    S.distribute.browsers = browsers;
+  }
+  if(sec === 'sign'){
+    if(!S.sign) S.sign={};
+    S.sign.confirmText = g('sg-text');
+    S.sign.uploadEach  = gc('sg-upload') ? 1 : 0;
+    S.sign.cats = {
+      notebook: gc('sg-nb')  ? 1 : 0,
+      phone:    gc('sg-ph')  ? 1 : 0,
+      ipad:     gc('sg-ip')  ? 1 : 0,
+      sim:      gc('sg-sim') ? 1 : 0,
+    };
+  }
+  if(sec === 'label'){
+    S.label = collectLabel();
+  }
+  if(sec === 'airwatch'){
+    S.airwatch = collectAirwatch();
+  }
+  if(sec === 'lansweeper'){
+    S.lansweeper = collectLansweeper();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  BIND STATE → INPUTS
+// ══════════════════════════════════════════════════════════════════════════
+function bindAll(){
+  var s = function(id,v){ var el=document.getElementById(id); if(el)el.value=v||''; };
+  var sc = function(id,v){ var el=document.getElementById(id); if(el)el.checked=!!v; };
+
+  // shared
+  s('s-url',   S.shared?.snipeitUrl);
+  s('s-tools', S.shared?.toolsUrl);
+  s('s-token', S.shared?.apiToken);
+  // mail
+  s('m-to',     S.mail?.mailTo);
+  s('m-cc',     S.mail?.mailCc);
+  s('m-sender', S.mail?.senderName);
+  s('m-btn',    S.mail?.btnLabel);
+  // pdf
+  s('p-co',     S.pdf?.company);
+  s('p-title',  S.pdf?.docTitle);
+  s('p-footer', S.pdf?.footer);
+  s('p-note',   S.pdf?.note);
+  s('p-simid',  S.pdf?.simCatId || 6);
+  sc('p-nb', S.pdf?.cats?.notebook);
+  sc('p-ph', S.pdf?.cats?.phone);
+  sc('p-ip', S.pdf?.cats?.ipad);
+  sc('p-sim', S.pdf?.cats?.sim);
+  // distribute
+  s('d-title',  S.distribute?.title);
+  s('d-sub',    S.distribute?.subtitle);
+  s('d-footer', S.distribute?.footer);
+  sc('d-mail',    S.distribute?.showMail);
+  sc('d-pdf',     S.distribute?.showPdf);
+  sc('d-sign',    S.distribute?.showSign);
+  sc('d-copy',    S.distribute?.showCopy);
+  sc('d-chrome',  (S.distribute?.browsers || []).includes('chrome'));
+  sc('d-edge',    (S.distribute?.browsers || []).includes('edge'));
+  sc('d-firefox', (S.distribute?.browsers || []).includes('firefox'));
+  sc('d-safari',  (S.distribute?.browsers || []).includes('safari'));
+  // sign
+  s('sg-text', S.sign?.confirmText);
+  sc('sg-nb',     S.sign?.cats?.notebook);
+  sc('sg-ph',     S.sign?.cats?.phone);
+  sc('sg-ip',     S.sign?.cats?.ipad);
+  sc('sg-sim',    S.sign?.cats?.sim);
+  sc('sg-upload', S.sign?.uploadEach);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  FIELD DEFINITIONS
+// ══════════════════════════════════════════════════════════════════════════
+var MAIL_FIELDS = {
+  mitarbeiter: [
+    {k:'user_name',   l:'Name',         key:'assigned_to.name'},
+    {k:'user_email',  l:'E-Mail',       key:'assigned_to.email'},
+    {k:'user_dept',   l:'Abteilung',    key:'assigned_to.department'},
+    {k:'kst',         l:'Kostenstelle', key:'DB: custom_fields[kst]'},
+    {k:'location',    l:'Standort',     key:'DB: custom_fields[location]'}
+  ],
+  asset: [
+    {k:'category',    l:'Kategorie',    key:'category.name'},
+    {k:'asset_tag',   l:'Asset-Tag',    key:'asset_tag'},
+    {k:'asset_name',  l:'Asset-Name',   key:'name'},
+    {k:'manufacturer',l:'Hersteller',   key:'manufacturer.name'},
+    {k:'model',       l:'Modell',       key:'model.name'},
+    {k:'serial',      l:'Seriennummer', key:'serial'},
+    {k:'imei',        l:'IMEI',         key:'DB: custom_fields[imei]'}
+  ],
+  beschaffung: [
+    {k:'supplier',      l:'Lieferant',     key:'supplier.name'},
+    {k:'order_number',  l:'Bestellnummer', key:'order_number'},
+    {k:'purchase_date', l:'Kaufdatum',     key:'purchase_date'},
+    {k:'purchase_cost', l:'Kaufpreis',     key:'purchase_cost'},
+    {k:'warranty',      l:'Garantie',      key:'warranty_months'},
+    {k:'checkout_date', l:'Ausgabe-Datum', key:'today'},
+    {k:'snipeit_link',  l:'SnipeIT-Link',  key:'id → URL'}
+  ]
+};
+
+var PDF_FIELDS = {
+  notebook: [{k:'asset_tag',l:'Asset-Tag'},{k:'asset_name',l:'Asset-Name'},{k:'model',l:'Modell'},{k:'serial',l:'Seriennummer'},{k:'manufacturer',l:'Hersteller'},{k:'purchase_date',l:'Kaufdatum'},{k:'warranty',l:'Garantie bis'}],
+  phone:    [{k:'asset_tag',l:'Asset-Tag'},{k:'model',l:'Modell'},{k:'serial',l:'Seriennummer'},{k:'imei',l:'IMEI'},{k:'asset_name',l:'Asset-Name'},{k:'manufacturer',l:'Hersteller'}],
+  ipad:     [{k:'asset_tag',l:'Asset-Tag'},{k:'model',l:'Modell'},{k:'serial',l:'Seriennummer'},{k:'imei',l:'IMEI'}],
+  sim:      [{k:'asset_tag',l:'ICCID (Asset-Tag)'},{k:'asset_name',l:'Rufnummer (Name)'},{k:'model',l:'Modell/Anbieter'}]
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+//  BUILD FIELD CHECKBOXES
+// ══════════════════════════════════════════════════════════════════════════
+function buildMailFields(){
+  ['mitarbeiter','asset','beschaffung'].forEach(function(grp){
+    var el = document.getElementById('mail-f-'+grp);
+    if(!el) return;
+    el.innerHTML = '';
+    MAIL_FIELDS[grp].forEach(function(f){
+      var chk = S.mail?.fields?.[grp]?.[f.k] ? 'checked' : '';
+      el.insertAdjacentHTML('beforeend',
+        '<label class="cb-row"><input type="checkbox" id="mf-'+grp+'-'+f.k+'" '+chk+
+        ' onchange="debounceSave(\'mail\');updateMailPreview()">'+
+        '<span class="cb-box"><i class="fa-solid fa-check"></i></span>'+
+        '<span class="cb-label">'+f.l+'</span><span class="cb-key">'+f.key+'</span></label>');
+    });
+  });
+}
+
+function buildPdfFields(){
+  ['notebook','phone','ipad','sim'].forEach(function(cat){
+    var el = document.getElementById('pdf-f-'+cat);
+    if(!el) return;
+    el.innerHTML = '';
+    PDF_FIELDS[cat].forEach(function(f){
+      var chk = S.pdf?.fields?.[cat]?.[f.k] ? 'checked' : '';
+      el.insertAdjacentHTML('beforeend',
+        '<label class="cb-row"><input type="checkbox" id="pf-'+cat+'-'+f.k+'" '+chk+
+        ' onchange="debounceSave(\'pdf\');updatePdfPreview();updatePdfPreview2()">'+
+        '<span class="cb-box"><i class="fa-solid fa-check"></i></span>'+
+        '<span class="cb-label">'+f.l+'</span></label>');
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  CUSTOM FIELDS — editable rows + live preview
+// ══════════════════════════════════════════════════════════════════════════
+
+function buildCfTable(){
+  var container=document.getElementById('cf-rows');
+  if(!container)return;
+  if(!CF.length){
+    container.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px 0">Noch keine Felder definiert. Unten ein neues Feld hinzufügen.</div>';
+    return;
+  }
+  container.innerHTML='';
+  CF.forEach(function(f){ container.appendChild(makeCfRow(f)); });
+}
+
+function makeCfRow(f){
+  var div=document.createElement('div');
+  div.id='cfrow-'+f.id;
+  div.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;transition:border-color .15s';
+
+  var toolOpts=['both','mail','pdf'].map(function(t){
+    return '<option value="'+t+'"'+(f.tool===t?' selected':'')+'>'+t+'</option>';
+  }).join('');
+
+  div.innerHTML=
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+      '<code style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--accent2);flex:1">'+esc(f.logical_name)+'</code>'+
+      '<span id="cfrow-status-'+f.id+'" style="font-size:11px;color:var(--muted)"></span>'+
+      '<button onclick="saveCfRow('+f.id+')" class="btn btn-green" style="padding:5px 12px;font-size:11px"><i class="fa-solid fa-floppy-disk"></i>Speichern</button>'+
+      '<button onclick="deleteCfRow('+f.id+')" class="btn btn-ghost" style="padding:5px 10px;font-size:11px;color:var(--danger);border-color:var(--danger)" title="Löschen"><i class="fa-solid fa-trash"></i></button>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+      '<div class="fr"><label>Label (Anzeige)</label><input id="cf-lbl-'+f.id+'" type="text" value="'+esc(f.label)+'" oninput="markDirty('+f.id+')"></div>'+
+      '<div class="fr"><label>Tool</label><select id="cf-tool-'+f.id+'" onchange="markDirty('+f.id+')">'+toolOpts+'</select></div>'+
+      '<div class="fr"><label>SnipeIT Key <span style="font-weight:400;color:var(--muted2)">(primär)</span></label>'+
+        '<div style="display:flex;gap:6px">'+
+          '<input id="cf-sk-'+f.id+'" type="text" value="'+esc(f.snipeit_key)+'" oninput="markDirty('+f.id+')" style="flex:1">'+
+          '<button onclick="copyFromPreview('+f.id+')" title="Key aus Preview übernehmen" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--muted);padding:0 8px;cursor:pointer;font-size:11px;white-space:nowrap"><i class="fa-solid fa-arrow-left"></i></button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="fr"><label>Fallback Key <span style="font-weight:400;color:var(--muted2)">(optional)</span></label><input id="cf-fb-'+f.id+'" type="text" value="'+esc(f.fallback_key||'')+'" oninput="markDirty('+f.id+')"></div>'+
+    '</div>'+
+    '<div id="cf-resolved-'+f.id+'" style="margin-top:8px;display:none"></div>';
+  return div;
+}
+
+function markDirty(id){
+  var s=document.getElementById('cfrow-status-'+id);
+  if(s){ s.textContent='● nicht gespeichert'; s.style.color='var(--warn)'; }
+  var row=document.getElementById('cfrow-'+id);
+  if(row) row.style.borderColor='var(--warn)';
+}
+
+async function saveCfRow(id){
+  var ln_el = CF.find(function(f){return f.id==id;});
+  var ln  = ln_el ? ln_el.logical_name : '';
+  var lbl = document.getElementById('cf-lbl-'+id)?.value.trim();
+  var sk  = document.getElementById('cf-sk-'+id)?.value.trim();
+  var fb  = document.getElementById('cf-fb-'+id)?.value.trim();
+  var tl  = document.getElementById('cf-tool-'+id)?.value;
+
+  if(!sk){ showToast('SnipeIT Key darf nicht leer sein','err'); return; }
+
+  var s=document.getElementById('cfrow-status-'+id);
+  if(s){ s.textContent='Speichert...'; s.style.color='var(--muted)'; }
+
+  var res=await apiPost('/fields',{logical_name:ln,label:lbl,snipeit_key:sk,fallback_key:fb||null,tool:tl});
+  if(res.ok){
+    if(s){ s.textContent='✓ Gespeichert'; s.style.color='var(--accent2)'; }
+    var row=document.getElementById('cfrow-'+id);
+    if(row) row.style.borderColor='var(--accent2)';
+    setTimeout(function(){
+      if(s){ s.textContent=''; }
+      if(row) row.style.borderColor='var(--border)';
+    }, 2000);
+    var fr=await apiGet('/fields'); CF=fr.data||[];
+    // re-run preview if asset loaded
+    if(lastTestAsset) updatePreviewRows(lastTestAsset);
+    showToast('Feld gespeichert — Runner-Seiten aktualisiert','ok');
+    loadFileStatus();
+  } else {
+    if(s){ s.textContent='✗ Fehler'; s.style.color='var(--danger)'; }
+    showToast('Fehler: '+res.error,'err');
+  }
+}
+
+async function deleteCfRow(id){
+  var f=CF.find(function(f){return f.id==id;});
+  if(!confirm('Feld "'+((f&&f.logical_name)||id)+'" löschen?')) return;
+  var res=await apiDelete('/fields/'+id);
+  if(res.ok){
+    var row=document.getElementById('cfrow-'+id);
+    if(row){ row.style.opacity='0'; row.style.transform='translateX(-10px)'; row.style.transition='all .2s'; setTimeout(function(){row.remove();},200); }
+    var fr=await apiGet('/fields'); CF=fr.data||[];
+    showToast('Feld gelöscht','ok');
+    loadFileStatus();
+  }
+}
+
+async function addNewField(){
+  var ln  = document.getElementById('cf-new-ln')?.value.trim();
+  var lbl = document.getElementById('cf-new-lbl')?.value.trim();
+  var sk  = document.getElementById('cf-new-sk')?.value.trim();
+  var fb  = document.getElementById('cf-new-fb')?.value.trim();
+  var tl  = document.getElementById('cf-new-tool')?.value;
+  if(!ln||!sk){ showToast('logical_name und SnipeIT Key sind Pflicht','err'); return; }
+  var res=await apiPost('/fields',{logical_name:ln,label:lbl||ln,snipeit_key:sk,fallback_key:fb||null,tool:tl});
+  if(res.ok){
+    ['cf-new-ln','cf-new-lbl','cf-new-sk','cf-new-fb'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+    var fr=await apiGet('/fields'); CF=fr.data||[];
+    buildCfTable();
+    if(lastTestAsset) updatePreviewRows(lastTestAsset);
+    showToast('Feld hinzugefügt — Runner-Seiten aktualisiert','ok');
+    loadFileStatus();
+  } else { showToast('Fehler: '+res.error,'err'); }
+}
+
+// ── Live Preview ──────────────────────────────────────────────
+var lastTestAsset = null;
+
+async function testAsset(){
+  var id=document.getElementById('cf-test-id')?.value.trim();
+  if(!id){ showToast('Asset-ID eingeben','err'); return; }
+
+  var status=document.getElementById('cf-test-status');
+  var prevRows=document.getElementById('cf-preview-rows');
+  var rawSection=document.getElementById('cf-raw-section');
+
+  if(status) status.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i> Lade Asset #'+id+'...';
+  if(prevRows) prevRows.innerHTML='';
+
+  var res=await fetch('/api/proxy/hardware/'+id);
+  var data=await res.json();
+
+  if(!data.id){
+    if(status) status.innerHTML='<span style="color:var(--danger)"><i class="fa-solid fa-circle-xmark"></i> Asset nicht gefunden</span>';
+    return;
+  }
+
+  lastTestAsset=data;
+
+  if(status) status.innerHTML='<span style="color:var(--accent2)"><i class="fa-solid fa-circle-check"></i> '+esc(data.name||data.asset_tag||'OK')+'</span>';
+
+  updatePreviewRows(data);
+
+  // Show all raw custom_fields keys
+  var cf=data.custom_fields||{};
+  var keys=Object.keys(cf);
+  if(rawSection){
+    if(keys.length){
+      rawSection.style.display='block';
+      var rawEl=document.getElementById('cf-raw-keys');
+      rawEl.innerHTML=keys.map(function(k){
+        var v=cf[k]&&cf[k].value?cf[k].value:'(leer)';
+        return '<div style="display:flex;gap:8px;align-items:center;padding:5px 8px;background:var(--surface);border:1px solid var(--border);border-radius:5px;cursor:pointer" onclick="copyKeyToClipboard(\''+esc(k)+'\')" title="Klicken zum Kopieren">'+
+          '<code style="font-family:var(--mono);font-size:10px;color:var(--accent2);flex:1">'+esc(k)+'</code>'+
+          '<span style="font-size:11px;color:var(--text)">'+esc(v)+'</span>'+
+          '<i class="fa-solid fa-copy" style="color:var(--muted);font-size:10px"></i>'+
+        '</div>';
+      }).join('');
+    } else {
+      rawSection.style.display='block';
+      document.getElementById('cf-raw-keys').innerHTML='<div style="font-size:12px;color:var(--muted)">Keine custom_fields in diesem Asset.</div>';
+    }
+  }
+}
+
+function updatePreviewRows(asset){
+  var cf=asset.custom_fields||{};
+  var prevRows=document.getElementById('cf-preview-rows');
+  if(!prevRows)return;
+
+  if(!CF.length){
+    prevRows.innerHTML='<div style="font-size:12px;color:var(--muted)">Keine Custom Fields konfiguriert.</div>';
+    return;
+  }
+
+  prevRows.innerHTML='';
+  CF.forEach(function(f){
+    // Try primary key
+    var val=null, usedKey=null;
+    if(cf[f.snipeit_key]&&cf[f.snipeit_key].value){
+      val=cf[f.snipeit_key].value; usedKey=f.snipeit_key;
+    } else if(f.fallback_key&&cf[f.fallback_key]&&cf[f.fallback_key].value){
+      val=cf[f.fallback_key].value; usedKey=f.fallback_key+'(fb)';
+    }
+
+    var found=val!==null;
+    var color=found?'var(--accent2)':'var(--danger)';
+    var icon=found?'fa-circle-check':'fa-circle-xmark';
+
+    var div=document.createElement('div');
+    div.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px';
+    div.innerHTML=
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
+        '<i class="fa-solid '+icon+'" style="color:'+color+';font-size:12px"></i>'+
+        '<code style="font-size:11px;color:var(--accent2);font-family:var(--mono)">'+esc(f.logical_name)+'</code>'+
+        '<span style="font-size:10px;color:var(--muted)">'+esc(f.label)+'</span>'+
+        '<span style="margin-left:auto;font-size:10px;background:var(--surface2);padding:1px 6px;border-radius:3px;color:var(--muted)">'+esc(f.tool)+'</span>'+
+      '</div>'+
+      '<div style="font-size:12px;font-weight:600;color:'+(found?'var(--text)':'var(--danger)')+'">'+
+        (found?esc(val):'Nicht gefunden')+
+      '</div>'+
+      (found?'<div style="font-size:10px;color:var(--muted);margin-top:2px">Key: '+esc(usedKey)+'</div>':
+             '<div style="font-size:10px;color:var(--muted);margin-top:2px">Probiert: '+esc(f.snipeit_key)+(f.fallback_key?' + '+esc(f.fallback_key):'')+'</div>');
+
+    // Update the resolved display in the field row if visible
+    var resolvedEl=document.getElementById('cf-resolved-'+f.id);
+    if(resolvedEl){
+      resolvedEl.style.display='block';
+      resolvedEl.innerHTML=
+        '<div style="display:flex;align-items:center;gap:6px;background:'+(found?'#0d2b1e':'#2b0d0d')+';border:1px solid '+(found?'#1a4a32':'#4a1a1a')+';border-radius:4px;padding:6px 10px">'+
+          '<i class="fa-solid '+(found?'fa-circle-check':'fa-circle-xmark')+'" style="color:'+color+'"></i>'+
+          '<span style="font-size:12px;color:'+(found?'var(--accent2)':'var(--danger)')+'">'+
+            (found?esc(val):'Nicht gefunden in Asset #'+esc(String(asset.id)))+
+          '</span>'+
+        '</div>';
+    }
+
+    prevRows.appendChild(div);
+  });
+}
+
+function copyFromPreview(id){
+  // Find which key resolved for this field and copy it to the snipeit_key input
+  var f=CF.find(function(f){return f.id==id;});
+  if(!f||!lastTestAsset) return;
+  var cf=lastTestAsset.custom_fields||{};
+  // Find first key that has a value
+  var keys=Object.keys(cf).filter(function(k){return cf[k]&&cf[k].value;});
+  if(!keys.length){ showToast('Keine Keys mit Wert im Asset gefunden','err'); return; }
+  // Find matching key
+  var match=keys.find(function(k){ return k===f.snipeit_key; }) ||
+            keys.find(function(k){ return k===f.fallback_key; });
+  if(match){
+    var input=document.getElementById('cf-sk-'+id);
+    if(input){ input.value=match; markDirty(id); showToast('Key übernommen: '+match,'ok'); }
+  } else {
+    showToast('Kein passender Key gefunden. Aus "Alle Keys" auswählen.','warn');
+  }
+}
+
+function copyKeyToClipboard(key){
+  navigator.clipboard.writeText(key).then(function(){
+    showToast('Key kopiert: '+key,'ok');
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  FILE STATUS
+// ══════════════════════════════════════════════════════════════════════════
+async function loadFileStatus(){
+  var res = await apiGet('/status');
+  if(!res.ok) return;
+  var files = res.data.files || {};
+  var bar = document.getElementById('fileStatus');
+  if(!bar) return;
+  var html = '';
+  Object.keys(files).forEach(function(f){
+    var fi = files[f];
+    if(fi.exists){
+      html += '<div class="fs-item ok"><i class="fa-solid fa-circle-check"></i><span>'+f+'</span><span class="fs-time">'+fi.modified.slice(11,16)+'</span></div>';
+    } else {
+      html += '<div class="fs-item miss"><i class="fa-solid fa-circle-xmark"></i><span>'+f+'</span></div>';
+    }
+  });
+  bar.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  BOOKMARKLET URLs (permanent — point to tools server)
+// ══════════════════════════════════════════════════════════════════════════
+function buildMailBM(){
+  var toolsUrl = (S.shared?.toolsUrl || 'http://tools.macit.lan').replace(/\/$/,'');
+  var page = toolsUrl + '/snipeit-bm.html';
+  return "javascript:(function(){var m=location.pathname.match(/\\/hardware\\/(\\d+)/);if(!m){alert('Nicht auf einer SnipeIT Asset-Seite');return;}window.open('"+page+"?id='+m[1],'_blank','width=520,height=320,left=200,top=150');})();";
+}
+function buildPdfBM(){
+  var toolsUrl = (S.shared?.toolsUrl || 'http://tools.macit.lan').replace(/\/$/,'');
+  var page = toolsUrl + '/snipeit-ausgabe-pdf.html';
+  return "javascript:(function(){var m=location.pathname.match(/\\/users\\/(\\d+)/);if(!m){alert('Auf einer SnipeIT User-Seite /users/{id} verwenden');return;}window.open('"+page+"?user_id='+m[1],'_blank','width=880,height=960');})();";
+}
+
+function updateBMs(){
+  var mailBM = buildMailBM(), pdfBM = buildPdfBM();
+  var label = S.mail?.btnLabel || 'Ausgabe an Buchhaltung';
+  ['bm-mail','bm-mail-cfg'].forEach(function(id){var el=document.getElementById(id);if(el)el.href=mailBM;});
+  ['bm-pdf','bm-pdf-cfg'].forEach(function(id){var el=document.getElementById(id);if(el)el.href=pdfBM;});
+  var lbl = document.getElementById('bm-mail-lbl');if(lbl)lbl.textContent=label;
+  var toolsUrl = (S.shared?.toolsUrl || 'http://tools.macit.lan').replace(/\/$/,'');
+  var hint = document.getElementById('d-url-hint');if(hint)hint.textContent=toolsUrl+'/install.html';
+  updateSignBMs();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  PREVIEWS
+// ══════════════════════════════════════════════════════════════════════════
+var MAIL_SAMPLES = {user_name:'John Doe',user_email:'user@example.com',user_dept:'IT',kst:'4711',location:'Main Office',category:'Notebook',asset_tag:'NB-1234',asset_name:'Laptop Model',manufacturer:'Lenovo',model:'Laptop Model Gen 12',serial:'L4X8F9123',imei:'354123456789012',supplier:'Example Supplier',order_number:'PO-2026-0001',purchase_date:'15.01.2026',purchase_cost:'1.290,00',warranty:'36 Monate (bis 15.01.2029)',checkout_date:new Date().toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit',year:'numeric'}),snipeit_link:'http://snipeit.example.com/hardware/42'};
+var GRP_LABELS = {mitarbeiter:'MITARBEITER',asset:'ASSET',beschaffung:'BESCHAFFUNG'};
+
+function updateMailPreview(){
+  var to = document.getElementById('m-to'); if(to) document.getElementById('pv-to').textContent=to.value||'—';
+  var cc = document.getElementById('m-cc'); if(cc) document.getElementById('pv-cc').textContent=cc.value||'—';
+  var sn = document.getElementById('m-sender');
+  var today = new Date().toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit',year:'numeric'});
+  var lines = ['Sehr geehrte Buchhaltung,\n','folgendes Asset wurde am '+today+' ausgegeben:\n'];
+  Object.keys(GRP_LABELS).forEach(function(g){
+    var keys = MAIL_FIELDS[g].filter(function(f){ var el=document.getElementById('mf-'+g+'-'+f.k);return el&&el.checked; });
+    if(!keys.length) return;
+    lines.push('─'.repeat(33)); lines.push(GRP_LABELS[g]);
+    keys.forEach(function(f){ lines.push((f.l+':').padEnd(20)+(MAIL_SAMPLES[f.k]||'—')); });
+    lines.push('');
+  });
+  lines.push('Mit freundlichen Grüßen\n'+(sn?sn.value||'IT':'IT'));
+  var body = document.getElementById('pv-body'); if(body) body.textContent = lines.join('\n');
+}
+
+var PDF_SAMPLES = {notebook:[{asset_tag:'NB-1234',asset_name:'ThinkPad X1',model:'Laptop Model Gen 12',serial:'L4X8F9123',manufacturer:'Lenovo',purchase_date:'15.01.2026',warranty:'15.01.2029'}],phone:[{asset_tag:'S24-001',model:'Galaxy S24',serial:'RZ8N80XY',imei:'354123456789012'}],ipad:[{asset_tag:'IP-012',model:'iPad Air M2',serial:'DMPH2XY1234',imei:'—'}],sim:[{asset_tag:'894310123456789',asset_name:'+43 664 1234567',model:'A1 Austria'}]};
+var CAT_CFG = {notebook:{color:'#1a3a6b',label:'Notebook'},phone:{color:'#1a4a2e',label:'Telefon'},ipad:{color:'#3a2a1a',label:'iPad'},sim:{color:'#2a1a4a',label:'SIM-Karte'}};
+var PDF_FL = {asset_tag:'Asset-Tag',asset_name:'Asset-Name',model:'Modell',serial:'Seriennummer',manufacturer:'Hersteller',imei:'IMEI',purchase_date:'Kaufdatum',warranty:'Garantie bis'};
+
+function buildPdfHtml(){
+  var co = document.getElementById('p-co');var title=document.getElementById('p-title');var footer=document.getElementById('p-footer');var note=document.getElementById('p-note');
+  var company=co?co.value:'Muster GmbH',docTitle=title?title.value:'Übergabeprotokoll',footerTxt=footer?footer.value:'',noteTxt=note?note.value:'';
+  var today=new Date().toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit',year:'numeric'});
+  function e(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):''}
+  var html='';
+  html+='<div style="display:flex;justify-content:space-between;border-bottom:2px solid #1a1a2e;padding-bottom:10px;margin-bottom:14px">';
+  html+='<div><div style="font-size:16px;font-weight:700;color:#1a1a2e">'+e(docTitle)+'</div><div style="font-size:10px;color:#666">'+e(company)+'</div></div>';
+  html+='<div style="text-align:right;font-size:10px;color:#444"><div>Datum: <b>'+today+'</b></div><div>Dok-Nr.: ___________</div></div></div>';
+  html+='<div style="background:#f4f6fb;border:1px solid #dde2ee;border-radius:5px;padding:10px 14px;margin-bottom:12px"><div style="font-weight:700;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#444;margin-bottom:6px">Mitarbeiter</div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">';
+  function iF(l,v){return '<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#888">'+l+'</div><div style="font-size:11px;font-weight:600;color:#1a1a2e;border-bottom:1px solid #ccd;padding-bottom:1px;min-height:16px">'+v+'</div></div>';}
+  html+=iF('Name','John Doe')+iF('Abteilung','IT')+iF('Kostenstelle','4711')+'</div></div>';
+  var cats=['notebook','phone','ipad','sim'];
+  cats.forEach(function(cat){
+    var catEl=document.getElementById('p-'+cat.replace('notebook','nb').replace('phone','ph').replace('ipad','ip').replace('sim','sim'));
+    if(!catEl||!catEl.checked) return;
+    var keys=PDF_FIELDS[cat].filter(function(f){var el=document.getElementById('pf-'+cat+'-'+f.k);return el&&el.checked;});
+    if(!keys.length) return;
+    var samples=PDF_SAMPLES[cat]||[];
+    html+='<div style="margin-bottom:10px"><div style="background:'+CAT_CFG[cat].color+';color:white;padding:5px 10px;border-radius:3px 3px 0 0;font-weight:700;font-size:10px;letter-spacing:.06em;text-transform:uppercase">'+CAT_CFG[cat].label+'</div>';
+    html+='<table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:#f0f2f8">';
+    keys.forEach(function(f){html+='<th style="padding:4px 7px;text-align:left;border:1px solid #dde;font-size:9px;text-transform:uppercase;letter-spacing:.04em">'+e(PDF_FL[f.k]||f.k)+'</th>';});
+    html+='<th style="padding:4px 7px;border:1px solid #dde;width:18px"></th></tr></thead><tbody>';
+    samples.forEach(function(s){html+='<tr>';keys.forEach(function(f){html+='<td style="padding:4px 7px;border:1px solid #dde">'+e(s[f.k]||'—')+'</td>';});html+='<td style="padding:4px 7px;border:1px solid #dde"></td></tr>';});
+    html+='</tbody></table></div>';
+  });
+  if(noteTxt) html+='<div style="background:#fff9e6;border:1px solid #f0d080;border-radius:3px;padding:7px 10px;margin:10px 0;font-size:9px;color:#555;line-height:1.5">'+e(noteTxt)+'</div>';
+  html+='<div style="margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:24px">';
+  function sB(l){return '<div><div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#444;margin-bottom:4px">'+l+'</div><div style="border-bottom:1px solid #333;height:28px;margin-bottom:4px"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:8px;color:#888;border-bottom:1px solid #ccc;padding-bottom:1px">Datum</div><div style="height:12px"></div></div><div><div style="font-size:8px;color:#888;border-bottom:1px solid #ccc;padding-bottom:1px">Stempel/Name</div><div style="height:12px"></div></div></div></div>';}
+  html+=sB('Mitarbeiter (Empfänger)')+sB('IT-Abteilung (Übergabe)')+'</div>';
+  if(footerTxt) html+='<div style="margin-top:16px;padding-top:8px;border-top:1px solid #ddd;font-size:8px;color:#888;text-align:center">'+e(footerTxt)+'</div>';
+  return html;
+}
+
+function updatePdfPreview(){ var el=document.getElementById('pv-pdf'); if(el) el.innerHTML=buildPdfHtml(); }
+function updatePdfPreview2(){ var el=document.getElementById('pv-pdf2'); if(el) el.innerHTML=buildPdfHtml(); }
+
+function updateDistPreview(){
+  var toolsUrl = (S.shared?.toolsUrl||'http://tools.macit.lan').replace(/\/$/,'');
+  var title    = document.getElementById('d-title')?.value || 'IT-Lesezeichen installieren';
+  var subtitle = document.getElementById('d-sub')?.value   || '';
+  var mailLabel= document.getElementById('m-btn')?.value   || 'Ausgabe an Buchhaltung';
+  var showMail = document.getElementById('d-mail')?.checked;
+  var showPdf  = document.getElementById('d-pdf')?.checked;
+  var showSign = document.getElementById('d-sign')?.checked;
+  function e(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):''}
+  var html='<div class="dist-card">';
+  html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">';
+  html+='<div style="width:38px;height:38px;background:#0078d4;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;color:white"><i class="fa-solid fa-bookmark"></i></div>';
+  html+='<div><div style="font-size:15px;font-weight:700;color:#111">'+e(title)+'</div>';
+  if(subtitle) html+='<div style="font-size:11px;color:#666">'+e(subtitle)+'</div>';
+  html+='</div></div>';
+  if(showMail){
+    html+='<div style="background:#f4f6fb;border-radius:7px;padding:10px 12px;margin-bottom:8px">';
+    html+='<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:7px"><i class="fa-solid fa-laptop" style="margin-right:4px"></i>Asset-Seite /hardware/{id}</div>';
+    html+='<a class="dist-bm-btn" style="background:#0078d4" href="#" onclick="return false;"><i class="fa-solid fa-envelope-open-text"></i>'+e(mailLabel)+'</a>';
+    html+='</div>';
+  }
+  if(showPdf||showSign){
+    html+='<div style="background:#f4f6fb;border-radius:7px;padding:10px 12px;margin-bottom:8px">';
+    html+='<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:7px"><i class="fa-solid fa-user" style="margin-right:4px"></i>Mitarbeiter-Seite /users/{id}</div>';
+    if(showPdf)  html+='<a class="dist-bm-btn" style="background:#7c5cbf" href="#" onclick="return false;"><i class="fa-solid fa-file-pdf"></i>Geräte-Ausgabe PDF</a>';
+    if(showSign) html+='<a class="dist-bm-btn" style="background:#5b3a8f" href="#" onclick="return false;"><i class="fa-solid fa-pen-nib"></i>Übergabe signieren</a>';
+    html+='</div>';
+  }
+  html+='<ol class="dist-steps">';
+  html+='<li>Lesezeichen-Leiste einblenden: <b>Strg+Umschalt+B</b> (Win) / <b>Cmd+Umschalt+B</b> (Mac)</li>';
+  html+='<li>Button gedrückt halten und auf die Leiste ziehen</li>';
+  html+='<li>In SnipeIT navigieren und Lesezeichen klicken</li>';
+  html+='</ol></div>';
+  var el=document.getElementById('pv-dist'); if(el) el.innerHTML=html;
+  var hint=document.getElementById('d-url-hint'); if(hint) hint.textContent=toolsUrl+'/install.html';
+}
+
+function updateAllPreviews(){
+  updateMailPreview(); updatePdfPreview(); updatePdfPreview2(); updateDistPreview(); updateBMs();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════════════════════════════════════
+function nav(id){
+  document.querySelectorAll('.view').forEach(function(v){ v.style.display='none'; v.classList.remove('active'); });
+  var target=document.getElementById('view-'+id);
+  if(target){
+    target.classList.add('active');
+    var isTool=target.classList.contains('tool-view');
+    target.style.display=isTool?'grid':'block';
+    if(id==='home')target.style.display='block';
+  }
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  var ni=document.getElementById('nav-'+id); if(ni) ni.classList.add('active');
+  if(id==='mail'||id==='pdf'||id==='pdf-cats') updateAllPreviews();
+  if(id==='distribute') updateDistPreview();
+  if(id==='sign-log') loadSignLog();
+  if(id==='home') dbLoad();
+  if(id==='label') loadLabel();
+
+// boot also loads dashboard immediately
+setTimeout(dbLoad, 300);
+  if(id==='airwatch-cfg') loadAirwatchCfg();
+  if(id==='airwatch-sync'){ loadAirwatchCfg(); awLoadStatus(); awLoadLogs(); }
+  if(id==='lansweeper-cfg') loadLansweeperCfg();
+  if(id==='lansweeper-sync'){ loadLansweeperCfg(); lsLoadStatus(); lsLoadLogs(); }
+  if(id==='fields'){ buildCfTable(); if(lastTestAsset) updatePreviewRows(lastTestAsset); }
+}
+
+function toggleSidebar(){
+  document.getElementById('body').classList.toggle('col');
+}
+
+function toggleGrp(hdr){
+  hdr.classList.toggle('closed');
+  var body=hdr.nextElementSibling; if(body) body.classList.toggle('closed');
+}
+
+function toggleSec(hdr){
+  hdr.classList.toggle('closed');
+  var body=hdr.nextElementSibling; if(body) body.classList.toggle('closed');
+}
+
+function toggleToken(inputId,iconId){
+  var t=document.getElementById(inputId),i=document.getElementById(iconId);
+  if(!t)return;
+  if(t.type==='password'){t.type='text';if(i)i.className='fa-solid fa-eye-slash';}
+  else{t.type='password';if(i)i.className='fa-solid fa-eye';}
+}
+
+function showPill(type, msg){
+  var pill=document.getElementById('statusPill');
+  var txt=document.getElementById('pillText');
+  if(!pill)return;
+  pill.style.display='flex';
+  pill.className='status-pill '+type;
+  if(type==='saving') pill.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i><span>'+msg+'</span>';
+  else if(type==='ok') pill.innerHTML='<i class="fa-solid fa-circle-check"></i><span>'+msg+'</span>';
+  else pill.innerHTML='<i class="fa-solid fa-circle-xmark"></i><span>'+msg+'</span>';
+  if(type !== 'saving') setTimeout(function(){pill.style.display='none';}, 3000);
+}
+
+var toastTimer;
+function showToast(msg, type){
+  var t=document.getElementById('toast');
+  var m=document.getElementById('toast-msg');
+  if(!t||!m)return;
+  m.textContent=msg;
+  t.className='show '+(type||'ok');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){t.className='';}, 3000);
+}
+
+function esc(s){ return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):''; }
+
+// ══════════════════════════════════════════════════════════════════════════
+//  SIGN
+// ══════════════════════════════════════════════════════════════════════════
+function buildSignBM(){
+  var toolsUrl=(S.shared?.toolsUrl||'http://tools.macit.lan').replace(/\/$/,'');
+  var page=toolsUrl+'/sign.html';
+  return "javascript:(function(){var m=location.pathname.match(/\\/users\\/(\\d+)/);if(!m){alert('Auf einer SnipeIT User-Seite /users/{id} verwenden');return;}window.open('"+page+"?user_id='+m[1],'_blank','width=780,height=940');})();";
+}
+
+function updateSignBMs(){
+  var bm=buildSignBM();
+  ['bm-sign','bm-sign-cfg'].forEach(function(id){var el=document.getElementById(id);if(el)el.href=bm;});
+  var toolsUrl=(S.shared?.toolsUrl||'http://tools.macit.lan').replace(/\/$/,'');
+  var link=document.getElementById('sign-open-link');
+  if(link)link.href=toolsUrl+'/sign.html?user_id=1';
+}
+
+async function loadSignLog(){
+  var tbody=document.getElementById('sign-log-body');
+  if(!tbody)return;
+  tbody.innerHTML='<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--muted)">Lade...</td></tr>';
+  var res=await apiGet('/sign/list');
+  if(!res.ok){tbody.innerHTML='<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--danger)">Fehler: '+esc(res.error)+'</td></tr>';return;}
+  var rows=res.data||[];
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--muted)">Noch keine Einträge.</td></tr>';return;}
+  var html='';
+  rows.forEach(function(r){
+    var ids=JSON.parse(r.asset_ids||'[]');
+    var ok=r.uploaded?'<span style="color:var(--accent2)"><i class="fa-solid fa-circle-check"></i> Hochgeladen</span>':'<span style="color:var(--warn)"><i class="fa-solid fa-triangle-exclamation"></i> Fehler</span>';
+    html+='<tr style="border-bottom:1px solid var(--border)">';
+    html+='<td style="padding:8px 12px;font-family:var(--mono);font-size:11px">'+esc(r.signed_at)+'</td>';
+    html+='<td style="padding:8px 12px;font-weight:600">'+esc(r.user_name)+'</td>';
+    html+='<td style="padding:8px 12px;color:var(--muted)">'+esc(r.user_dept)+'</td>';
+    html+='<td style="padding:8px 12px;font-family:var(--mono);font-size:11px">'+ids.length+' Asset'+(ids.length!==1?'s':'')+'</td>';
+    html+='<td style="padding:8px 12px">'+ok+'</td>';
+    html+='</tr>';
+  });
+  tbody.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  LABEL
+// ══════════════════════════════════════════════════════════════════════════
+async function loadLabel(){
+  try {
+    var res = await apiGet('/config');
+    if(!res.ok) throw new Error(res.error||'Config laden fehlgeschlagen');
+    var lb = res.data.label || {};
+    var s=function(id,v){var el=document.getElementById(id);if(el)el.value=v||'';};
+    s('lb-ip',   lb.printerIp||'');
+    s('lb-port', lb.printerPort||'9100');
+    s('lb-copies',lb.copies||'1');
+  } catch(e){ console.error('loadLabel',e); }
+}
+
+function collectLabel(){
+  var g=function(id){var el=document.getElementById(id);return el?el.value:'';};
+  return {
+    printerIp:   g('lb-ip'),
+    printerPort: g('lb-port')||'9100',
+    copies:      g('lb-copies')||'1',
+  };
+}
+
+async function labelTest(){
+  var btn = event.target.closest('button');
+  var res = document.getElementById('lb-test-result');
+  if(btn) btn.disabled=true;
+  if(res) res.textContent='Sende...';
+  // Konfiguration zuerst speichern
+  await saveSection('label', collectLabel());
+  try {
+    var r = await fetch('/api/label/test', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    var t = await r.text(); var start=t.indexOf('{'); if(start>0) t=t.substring(start);
+    var d = JSON.parse(t);
+    if(res) res.innerHTML = d.ok
+      ? '<i class="fa-solid fa-circle-check" style="color:#27ae60"></i> Testlabel gesendet'
+      : '<i class="fa-solid fa-circle-xmark" style="color:#e74c3c"></i> ' + (d.error||'Fehler');
+  } catch(e){
+    if(res) res.innerHTML='<i class="fa-solid fa-circle-xmark" style="color:#e74c3c"></i> Netzwerkfehler';
+  }
+  if(btn) btn.disabled=false;
+  setTimeout(function(){ if(res) res.textContent=''; }, 5000);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════════════════════════════
+function getToolsUrl(){
+  var cfg=window._cfgCache||{};
+  return (cfg.shared&&cfg.shared.toolsUrl)||'http://it-tools.example.com';
+}
+
+async function dbLoad(){
+  var icon=document.getElementById('db-refresh-icon');
+  if(icon) icon.className='fa-solid fa-rotate-right fa-spin';
+  document.getElementById('db-updated').textContent='Wird geladen...';
+
+  await Promise.allSettled([
+    dbLoadKPIs(),
+    dbLoadFiles(),
+    dbLoadSyncStatus(),
+  ]);
+
+  var now=new Date().toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('db-updated').textContent='Zuletzt aktualisiert: ' + now;
+  if(icon) icon.className='fa-solid fa-rotate-right';
+}
+
+async function dbLoadKPIs(){
+  // Proxy gibt rohe SnipeIT-Antwort zurück — {total, rows:[...]}
+  var set=function(id,val){
+    var e=document.getElementById(id); if(e) e.textContent=val;
+  };
+  try {
+    var [nb,ph,ip,ac] = await Promise.all([
+      fetch('/api/proxy/hardware?category_id=4&limit=1').then(r=>r.json()),
+      fetch('/api/proxy/hardware?category_id=2&limit=1').then(r=>r.json()),
+      fetch('/api/proxy/hardware?category_id=5&limit=1').then(r=>r.json()),
+      fetch('/api/proxy/accessories?limit=1').then(r=>r.json()),
+    ]);
+    set('kpi-notebooks', nb.total ?? '—');
+    set('kpi-phones',    ph.total ?? '—');
+    set('kpi-ipads',     ip.total ?? '—');
+    set('kpi-acc',       ac.total ?? '—');
+  } catch(e){
+    ['kpi-notebooks','kpi-phones','kpi-ipads','kpi-acc'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.textContent='—';
+    });
+  }
+}
+
+async function dbLoadFiles(){
+  var el=document.getElementById('db-files');
+  var d=await apiGet('/status').catch(()=>null);
+  if(!d||!d.ok){ if(el) el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px 0">Status nicht verfügbar</div>'; return; }
+  var files=d.data||[];
+  if(!Array.isArray(files)||!files.length){ if(el) el.innerHTML='<div style="color:#fbbf24;font-size:12px;padding:8px 0">Keine Dateien generiert</div>'; return; }
+  if(el) el.innerHTML=files.map(function(f){
+    var ok=f.exists!==false;
+    return '<div class="db-file">'
+      +'<div class="dot '+(ok?'dot-ok':'dot-err')+'"></div>'
+      +'<div class="db-file-name">'+esc(f.file||f.name||'')+'</div>'
+      +'<div class="db-file-time">'+(f.modified||f.mtime||'')+'</div>'
+    +'</div>';
+  }).join('');
+}
+
+async function dbLoadSyncStatus(){
+  // AirWatch letzter Sync
+  var awLbl=document.getElementById('aw-sync-lbl');
+  var awDot=document.getElementById('aw-dot');
+  try {
+    var aw=await apiGet('/airwatch/logs');
+    if(aw.ok&&aw.data.length){
+      var last=aw.data[0];
+      var ok=last.status==='ok';
+      if(awDot){ awDot.className='dot '+(ok?'dot-ok':'dot-warn'); }
+      if(awLbl) awLbl.innerHTML='AirWatch · '+last.started_at.substring(0,10)
+        +' · <b>'+last.created+'</b> angelegt'+(last.errors>0?' · <span style="color:#f87171">'+last.errors+' Fehler</span>':'');
+    } else {
+      if(awDot) awDot.className='dot dot-muted';
+      if(awLbl) awLbl.textContent='AirWatch · Noch kein Sync';
+    }
+  } catch(e){ if(awLbl) awLbl.textContent='AirWatch · Nicht konfiguriert'; }
+
+  // Lansweeper letzter Import
+  var lsLbl=document.getElementById('ls-sync-lbl');
+  var lsDot=document.getElementById('ls-dot');
+  try {
+    var ls=await apiGet('/lansweeper/logs');
+    if(ls.ok&&ls.data.length){
+      var last=ls.data[0];
+      var ok=last.status==='ok';
+      if(lsDot){ lsDot.className='dot '+(ok?'dot-ok':'dot-warn'); }
+      if(lsLbl) lsLbl.innerHTML='Lansweeper · '+last.started_at.substring(0,10)
+        +' · <b>'+last.created+'</b> angelegt'+(last.errors>0?' · <span style="color:#f87171">'+last.errors+' Fehler</span>':'');
+    } else {
+      if(lsDot) lsDot.className='dot dot-muted';
+      if(lsLbl) lsLbl.textContent='Lansweeper · Noch kein Import';
+    }
+  } catch(e){ if(lsLbl) lsLbl.textContent='Lansweeper · Nicht konfiguriert'; }
+}
+
+async function dbRegenerate(){
+  var btn=document.getElementById('btn-regen');
+  if(btn){ btn.disabled=true; btn.textContent='Generiert...'; }
+  var d=await apiPost('/generate',{type:'all'}).catch(()=>null);
+  if(btn){ btn.disabled=false; btn.textContent='Alle neu generieren'; }
+  await dbLoadFiles();
+  showToast('Alle Dateien neu generiert', d&&d.ok?'ok':'err');
+}
+
+async function dbManualSync(type){
+  var card=document.getElementById('db-log-card');
+  var logEl=document.getElementById('db-log-out');
+  var title=document.getElementById('db-log-title');
+  if(card) card.style.display='block';
+  if(title) title.textContent=type==='airwatch'?'AirWatch Sync':'Lansweeper Import';
+  if(logEl) logEl.textContent='Starte...';
+
+  var url=type==='airwatch'?'/airwatch/sync':'/lansweeper/sync';
+  var btnId=type==='airwatch'?'db-btn-aw':'db-btn-ls';
+  var btn=document.getElementById(btnId);
+  if(btn) btn.disabled=true;
+
+  try {
+    var res=await fetch('/api'+url,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    var t=await res.text(); var s=t.indexOf('{');if(s>0)t=t.substring(s);
+    var d=JSON.parse(t);
+    var lines=(d.data?.log||[d.error||'Kein Log']);
+    if(logEl) logEl.textContent=Array.isArray(lines)?lines.join('\n'):String(lines);
+    if(logEl) logEl.scrollTop=logEl.scrollHeight;
+  } catch(e){
+    if(logEl) logEl.textContent='Fehler: '+e.message;
+  }
+  if(btn) btn.disabled=false;
+  dbLoadSyncStatus();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  AIRWATCH
+// ══════════════════════════════════════════════════════════════════════════
+async function loadAirwatchCfg(){
+  try {
+    var res=await apiGet('/config'); if(!res.ok) return;
+    var aw=res.data.airwatch||{};
+    var s=function(id,v){var el=document.getElementById(id);if(el)el.value=v||'';};
+    var c=function(id,v){var el=document.getElementById(id);if(el)el.checked=!!v;};
+    s('aw-url',   aw.awUrl||''); s('aw-user',   aw.awUser||'');
+    s('aw-pass',  aw.awPassword||''); s('aw-tenant', aw.awTenantCode||'');
+    s('aw-pagesize', aw.pageSize||'500');
+    c('aw-ssl', aw.sslVerify);
+  } catch(e){}
+}
+function collectAirwatch(){
+  var g=function(id){var el=document.getElementById(id);return el?el.value:'';};
+  return { awUrl:g('aw-url'), awUser:g('aw-user'), awPassword:g('aw-pass'),
+           awTenantCode:g('aw-tenant'), pageSize:g('aw-pagesize'),
+           sslVerify:document.getElementById('aw-ssl')?.checked?1:0 };
+}
+async function awTest(){
+  var res=document.getElementById('aw-test-result');
+  if(res) res.textContent='Teste...';
+  await saveSection('airwatch', collectAirwatch());
+  var d=await apiGet('/airwatch/status').catch(()=>null);
+  if(res) res.innerHTML = d&&d.ok
+    ? '<i class="fa-solid fa-circle-check" style="color:#27ae60"></i> Verbunden — '+d.data.aw_total+' Geräte'
+    : '<i class="fa-solid fa-circle-xmark" style="color:#e74c3c"></i> '+(d?.error||'Verbindung fehlgeschlagen');
+  setTimeout(()=>{if(res)res.textContent='';},6000);
+}
+async function awLoadStatus(){
+  var el=document.getElementById('aw-status-content');
+  if(el) el.innerHTML='<div style="text-align:center;padding:16px"><div class="sp" style="margin:0 auto"></div></div>';
+  var d=await apiGet('/airwatch/status').catch(e=>({ok:false,error:e.message}));
+  if(!d.ok){ if(el) el.innerHTML='<span style="color:#f87171">'+esc(d.error||'Fehler')+'</span>'; return; }
+  var r=d.data;
+  if(el) el.innerHTML=
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;text-align:center">'
+    +'<div><div style="font-size:22px;font-weight:700;color:var(--accent)">'+r.aw_total+'</div><div style="font-size:11px;color:var(--muted)">AirWatch</div></div>'
+    +'<div><div style="font-size:22px;font-weight:700;color:var(--accent)">'+r.snipe_total+'</div><div style="font-size:11px;color:var(--muted)">SnipeIT</div></div>'
+    +'<div><div style="font-size:22px;font-weight:700;color:#34d399">'+r.matched+'</div><div style="font-size:11px;color:var(--muted)">Übereinstimmend</div></div>'
+    +'<div><div style="font-size:22px;font-weight:700;color:#fbbf24">'+r.only_in_aw.length+'</div><div style="font-size:11px;color:var(--muted)">Nur in AirWatch</div></div>'
+    +'</div><div style="font-size:11px;color:var(--muted);margin-top:8px">Stand: '+r.fetched_at+'</div>';
+
+  var aw=document.getElementById('aw-only-aw');
+  var awList=document.getElementById('aw-only-aw-list');
+  var awTitle=document.getElementById('aw-only-aw-title');
+  if(r.only_in_aw.length && aw && awList){
+    aw.style.display='block';
+    if(awTitle) awTitle.textContent='Nur in AirWatch ('+r.only_in_aw.length+') — nicht in SnipeIT';
+    awList.innerHTML=r.only_in_aw.map(function(d,i){
+      return '<div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:11px;background:'+(i%2?'var(--surface)':'transparent')+'">'
+        +'<span style="font-weight:600;font-family:monospace">'+esc(d.serial)+'</span>'
+        +' — '+esc(d.model)+(d.friendly_name?' ('+esc(d.friendly_name)+')':'')+'</div>';
+    }).join('');
+  } else if(aw){ aw.style.display='none'; }
+  awLoadLogs();
+}
+async function awDryRun(){
+  var btn=document.getElementById('btn-aw-dry');
+  var log=document.getElementById('aw-log');
+  var card=document.getElementById('aw-log-card')||document.querySelector('#view-airwatch-sync .db-card:last-child');
+  if(btn) btn.disabled=true;
+  if(log){ log.textContent=''; log.style.color='#fbbf24'; }
+  var title=document.getElementById('aw-log-title');
+  if(title) title.textContent='Dry Run — Analyse';
+
+  var res=await fetch('/api/airwatch/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true})});
+  var t=await res.text(); var s=t.indexOf('{');if(s>0)t=t.substring(s);
+  var d=JSON.parse(t);
+  var lines=(d.data?.log||[d.error||'Kein Log']);
+  if(log){ log.textContent=Array.isArray(lines)?lines.join('\n'):String(lines); log.scrollTop=log.scrollHeight; }
+  if(btn) btn.disabled=false;
+
+  if(d.ok&&d.data){
+    var n=d.data.would_create?.length||0;
+    showToast('[DRY RUN] '+n+' Geräte würden angelegt','ok');
+  }
+}
+
+async function lsDryRun(){
+  var btn=document.getElementById('btn-ls-dry');
+  var log=document.getElementById('ls-log');
+  if(btn) btn.disabled=true;
+  if(log){ log.textContent=''; log.style.color='#fbbf24'; }
+
+  await saveSection('lansweeper', collectLansweeper());
+  var res=await fetch('/api/lansweeper/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true})});
+  var t=await res.text(); var s=t.indexOf('{');if(s>0)t=t.substring(s);
+  var d=JSON.parse(t);
+  var lines=(d.data?.log||[d.error||'Kein Log']);
+  if(log){ log.textContent=Array.isArray(lines)?lines.join('\n'):String(lines); log.scrollTop=log.scrollHeight; }
+  if(btn) btn.disabled=false;
+
+  if(d.ok&&d.data){
+    var n=d.data.would_create?.length||0;
+    showToast('[DRY RUN] '+n+' Notebooks würden angelegt','ok');
+  }
+}
+
+async function awSync(){
+  var btn=document.getElementById('btn-aw-sync');
+  var log=document.getElementById('aw-log');
+  if(btn) btn.disabled=true;
+  if(log){ log.textContent=''; log.style.color='#94a3b8'; }
+  var res=await fetch('/api/airwatch/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  var t=await res.text(); var s=t.indexOf('{');if(s>0)t=t.substring(s);
+  var d=JSON.parse(t);
+  if(log) log.textContent=(d.data?.log||d.error||'Kein Log').join?d.data.log.join('\n'):String(d.data?.log||d.error||'');
+  if(btn) btn.disabled=false;
+  awLoadStatus(); awLoadLogs();
+}
+async function awLoadLogs(){
+  var el=document.getElementById('aw-history');
+  var d=await apiGet('/airwatch/logs').catch(()=>null);
+  if(!d||!d.ok||!d.data.length){ if(el) el.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px">Noch kein Sync ausgeführt.</div>'; return; }
+  if(el) el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:11px">'
+    +'<thead><tr style="background:var(--border-subtle)">'
+    +'<th style="padding:7px 10px;text-align:left">Datum</th><th>AW</th><th>Angelegt</th><th>Fehler</th><th>Status</th></tr></thead>'
+    +'<tbody>'
+    +d.data.map(function(r,i){
+      var sc=r.status==='ok'?'#34d399':'#fbbf24';
+      return '<tr style="background:'+(i%2?'var(--surface)':'transparent')+'">'
+        +'<td style="padding:6px 10px">'+r.started_at+'</td>'
+        +'<td style="text-align:center">'+r.aw_devices+'</td>'
+        +'<td style="text-align:center">'+r.created+'</td>'
+        +'<td style="text-align:center">'+r.errors+'</td>'
+        +'<td style="text-align:center"><span style="color:'+sc+'">●</span></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  LANSWEEPER
+// ══════════════════════════════════════════════════════════════════════════
+async function loadLansweeperCfg(){
+  try {
+    var res=await apiGet('/config'); if(!res.ok) return;
+    var ls=res.data.lansweeper||{};
+    var s=function(id,v){var el=document.getElementById(id);if(el)el.value=v||'';};
+    s('ls-path',    ls.csvPath||'/data/BRUT');
+    s('ls-pattern', ls.csvPattern||'web*.csv');
+    s('ls-delim',   ls.delimiter||';');
+    var enc=document.getElementById('ls-enc'); if(enc) enc.value=ls.encoding||'UTF-8';
+    s('ls-col-sn',    ls.colSerial||'Seriennummer');
+    s('ls-col-name',  ls.colAssetName||'AssetName');
+    s('ls-col-user',  ls.colUser||'Benutzer/Anmeldung');
+    s('ls-col-model', ls.colModel||'Modell');
+    s('ls-col-mfr',   ls.colManufacturer||'Hersteller');
+    s('ls-cat',    ls.categoryId||'4');
+    s('ls-status', ls.defaultStatusId||'1');
+    s('ls-model',  ls.defaultModelId||'0');
+  } catch(e){}
+}
+function collectLansweeper(){
+  var g=function(id){var el=document.getElementById(id);return el?el.value:'';};
+  return { csvPath:g('ls-path'), csvPattern:g('ls-pattern'), delimiter:g('ls-delim'),
+           encoding:g('ls-enc'), colSerial:g('ls-col-sn'), colAssetName:g('ls-col-name'),
+           colUser:g('ls-col-user'), colModel:g('ls-col-model'), colManufacturer:g('ls-col-mfr'),
+           categoryId:g('ls-cat'), defaultStatusId:g('ls-status'), defaultModelId:g('ls-model') };
+}
+async function lsLoadStatus(){
+  var el=document.getElementById('ls-status-content');
+  var d=await apiGet('/lansweeper/status').catch(e=>({ok:false,error:e.message}));
+  if(!d.ok){ if(el) el.innerHTML='<span style="color:#f87171">'+esc(d.error||'Fehler')+'</span>'; return; }
+  var r=d.data;
+  var html='<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Pfad: <code>'+esc(r.csv_path+'/'+r.csv_pattern)+'</code></div>';
+  if(!r.csv_files.length){ html+='<span style="color:#fbbf24"><i class="fa-solid fa-triangle-exclamation"></i> Keine CSV-Dateien gefunden.</span>'; }
+  else {
+    html+=r.csv_files.map(function(f){
+      return '<div style="display:flex;gap:10px;padding:4px 0;border-bottom:1px solid var(--border)">'
+        +'<i class="fa-solid fa-file-csv" style="color:#34d399;flex-shrink:0;margin-top:1px"></i>'
+        +'<div><div style="font-weight:600">'+esc(f.name)+'</div>'
+        +'<div style="font-size:11px;color:var(--muted)">'+esc(f.mtime)+' · '+(f.size/1024).toFixed(0)+' KB</div></div></div>';
+    }).join('');
+  }
+  if(el) el.innerHTML=html;
+  lsLoadLogs();
+}
+async function lsSync(){
+  var btn=document.getElementById('btn-ls-sync');
+  var log=document.getElementById('ls-log');
+  if(btn) btn.disabled=true;
+  if(log){ log.textContent=''; log.style.color='#86efac'; }
+  await saveSection('lansweeper', collectLansweeper());
+  var res=await fetch('/api/lansweeper/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  var t=await res.text(); var s=t.indexOf('{');if(s>0)t=t.substring(s);
+  var d=JSON.parse(t);
+  if(log) log.textContent=(d.data?.log||[d.error||'Kein Log']).join('\n');
+  if(btn) btn.disabled=false;
+  lsLoadStatus(); lsLoadLogs();
+}
+async function lsLoadLogs(){
+  var el=document.getElementById('ls-history');
+  var d=await apiGet('/lansweeper/logs').catch(()=>null);
+  if(!d||!d.ok||!d.data.length){ if(el) el.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px">Noch kein Import ausgeführt.</div>'; return; }
+  if(el) el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:11px">'
+    +'<thead><tr style="background:var(--border-subtle)">'
+    +'<th style="padding:7px 10px;text-align:left">Datum</th><th>Dateien</th><th>Gelesen</th><th>Angelegt</th><th>Fehler</th><th>Status</th></tr></thead>'
+    +'<tbody>'
+    +d.data.map(function(r,i){
+      var sc=r.status==='ok'?'#34d399':'#fbbf24';
+      return '<tr style="background:'+(i%2?'var(--surface)':'transparent')+'">'
+        +'<td style="padding:6px 10px">'+r.started_at+'</td>'
+        +'<td style="text-align:center">'+r.csv_files+'</td>'
+        +'<td style="text-align:center">'+r.rows_read+'</td>'
+        +'<td style="text-align:center">'+r.created+'</td>'
+        +'<td style="text-align:center">'+r.errors+'</td>'
+        +'<td style="text-align:center"><span style="color:'+sc+'">●</span></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>

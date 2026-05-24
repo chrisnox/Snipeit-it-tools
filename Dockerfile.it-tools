@@ -1,0 +1,69 @@
+# ============================================================
+#  IT-Tools — Dockerfile
+#  Version  : 1.3.0
+#  Geändert : 2026-05-04
+#
+#  Basis-Image : php:8.2-apache (Debian)
+#  Aufgabe     : PHP-Applikationsserver für IT-Tools
+#
+#  Installierte PHP-Erweiterungen:
+#    pdo, pdo_mysql  → MariaDB-Datenbankzugriff
+#    gd              → PNG-Generierung für Signatur-Dokumente
+#
+#  Installierte System-Pakete:
+#    fonts-dejavu-core   → Schriften für GD PNG-Dokumente
+#    libfreetype6-dev    → TrueType-Schriften in GD
+#    libjpeg62-turbo-dev → JPEG-Unterstützung in GD
+#    libpng-dev          → PNG-Unterstützung in GD
+#
+#  Bind-Mounts (in docker-compose.yml):
+#    ./it-tools/admin.html → /var/www/html/admin.html
+#    (Ermöglicht Aktualisierung ohne Rebuild)
+#
+#  Alle anderen Dateien werden beim Build ins Image kopiert.
+# ============================================================
+
+FROM php:8.2-apache
+
+# System-Abhängigkeiten installieren (DejaVu-Fonts für GD-Dokumente)
+RUN apt-get update && apt-get install -y \
+      libfreetype6-dev \
+      libjpeg62-turbo-dev \
+      libpng-dev \
+      fonts-dejavu-core \
+  && docker-php-ext-configure gd \
+       --with-freetype \
+       --with-jpeg \
+  && docker-php-ext-install \
+       pdo \
+       pdo_mysql \
+       gd \
+  && rm -rf /var/lib/apt/lists/*
+
+# Apache mod_rewrite aktivieren (für saubere API-URLs)
+RUN a2enmod rewrite
+
+# Apache-Konfiguration: .htaccess-Dateien erlauben, Directory-Listing deaktivieren
+RUN echo '<Directory /var/www/html>\n\
+    Options -Indexes\n\
+    AllowOverride All\n\
+    Require all granted\n\
+</Directory>' >> /etc/apache2/apache2.conf
+
+# Statische Dateien ins Image kopieren
+COPY .htaccess  /var/www/html/.htaccess
+COPY api.php    /var/www/html/api.php
+COPY index.php  /var/www/html/index.php
+
+# Alle Modul-Dateien ins Image kopieren
+COPY modules/   /var/www/html/modules/
+
+# Startup-Script: generiert fehlende Runner-Dateien beim Container-Start
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# admin.html wird in docker-compose.yml als Bind-Mount eingebunden
+# → kann ohne Rebuild aktualisiert werden
+
+EXPOSE 80
+CMD ["/usr/local/bin/docker-entrypoint.sh"]
